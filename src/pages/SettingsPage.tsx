@@ -14,16 +14,23 @@ function InstallButton() {
     function beforeInstallPrompt(e) {
       e.preventDefault();
       deferredPrompt = e;
-      if (btnRef.current) btnRef.current.style.display = "block";
-      btnRef.current.addEventListener("click", async () => {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response: ${outcome}`);
-        deferredPrompt = null;
-        btnRef.current.style.display = "none";
-      });
     }
     window.addEventListener("beforeinstallprompt", beforeInstallPrompt);
+    
+    if (btnRef.current) {
+      btnRef.current.addEventListener("click", async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log(`User response: ${outcome}`);
+          deferredPrompt = null;
+        } else {
+          // Fallback: try to install if already installed or no prompt available
+          console.log("Install prompt not available");
+        }
+      });
+    }
+    
     return () => {
       window.removeEventListener("beforeinstallprompt", beforeInstallPrompt);
     };
@@ -32,7 +39,7 @@ function InstallButton() {
     <button
       ref={btnRef}
       id="installBtn-settings"
-      style={{ display: "none", marginTop: 24 }}
+      style={{ marginTop: 24 }}
       className="px-4 py-2 bg-blue-600 text-white rounded shadow-lg hover:bg-blue-700 transition"
     >
       Install App
