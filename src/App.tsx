@@ -3,60 +3,130 @@ import { useEffect, useRef, useState } from "react";
 function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isVisible, setIsVisible] = useState(true);
+  const [installStatus, setInstallStatus] = useState('checking');
 
   useEffect(() => {
+    console.log('InstallButton component mounted');
+
     function beforeInstallPrompt(e) {
+      console.log('beforeinstallprompt event fired');
       e.preventDefault();
       setDeferredPrompt(e);
       setIsVisible(true);
+      setInstallStatus('available');
+    }
+
+    function appInstalled() {
+      console.log('App was installed');
+      setIsVisible(false);
+      setInstallStatus('installed');
     }
 
     window.addEventListener("beforeinstallprompt", beforeInstallPrompt);
+    window.addEventListener("appinstalled", appInstalled);
+
+    // Check if we're in a secure context
+    console.log('Is secure context:', window.isSecureContext);
+    console.log('Protocol:', window.location.protocol);
+    console.log('Hostname:', window.location.hostname);
+
+    // Check PWA criteria
+    const checkPWACriteria = async () => {
+      const criteria = {
+        https: window.location.protocol === 'https:' || window.location.hostname === 'localhost',
+        serviceWorker: 'serviceWorker' in navigator,
+        manifest: !!document.querySelector('link[rel="manifest"]'),
+        standalone: window.matchMedia('(display-mode: standalone)').matches
+      };
+
+      console.log('PWA Criteria:', criteria);
+
+      if (!criteria.https) {
+        console.warn('PWA requires HTTPS (except localhost)');
+        setInstallStatus('https-required');
+      } else if (!criteria.serviceWorker) {
+        console.warn('Service Worker not supported');
+        setInstallStatus('sw-not-supported');
+      } else if (!criteria.manifest) {
+        console.warn('Manifest not found');
+        setInstallStatus('manifest-missing');
+      } else {
+        setInstallStatus('ready');
+      }
+    };
+
+    checkPWACriteria();
 
     return () => {
       window.removeEventListener("beforeinstallprompt", beforeInstallPrompt);
+      window.removeEventListener("appinstalled", appInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
+    console.log('Install button clicked');
+    console.log('Deferred prompt available:', !!deferredPrompt);
+    console.log('Install status:', installStatus);
+
     if (deferredPrompt) {
       try {
-        deferredPrompt.prompt();
+        console.log('Calling prompt()');
+        const result = await deferredPrompt.prompt();
+        console.log('Prompt result:', result);
+
         const { outcome } = await deferredPrompt.userChoice;
         console.log(`User response: ${outcome}`);
         setDeferredPrompt(null);
         if (outcome === 'accepted') {
           setIsVisible(false);
+          setInstallStatus('installed');
+        } else {
+          setInstallStatus('dismissed');
         }
       } catch (error) {
         console.error('Error during installation:', error);
+        setInstallStatus('error');
       }
     } else {
-      console.log("Install prompt not available. App may already be installed.");
-      // Try to open the app if it's already installed
-      if ('getInstalledRelatedApps' in navigator && typeof navigator.getInstalledRelatedApps === 'function') {
-        try {
-          const relatedApps = await navigator.getInstalledRelatedApps();
-          if (relatedApps.length > 0) {
-            console.log("App is already installed");
-          }
-        } catch (error) {
-          console.log("Could not check installed apps:", error);
-        }
+      console.log("Install prompt not available");
+      setInstallStatus('not-available');
+
+      // Try alternative installation methods
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log("App is already installed (standalone mode)");
+        setInstallStatus('already-installed');
+        setIsVisible(false);
       }
     }
   };
 
-  if (!isVisible) return null;
+  const getButtonText = () => {
+    switch (installStatus) {
+      case 'checking': return 'Checking...';
+      case 'available': return 'Install App';
+      case 'installed': return 'Installed ✓';
+      case 'dismissed': return 'Install App';
+      case 'not-available': return 'Not Available';
+      case 'https-required': return 'HTTPS Required';
+      case 'sw-not-supported': return 'Not Supported';
+      case 'manifest-missing': return 'Config Error';
+      case 'already-installed': return 'Already Installed';
+      case 'error': return 'Install Failed';
+      default: return 'Install App';
+    }
+  };
+
+  if (!isVisible || installStatus === 'installed' || installStatus === 'already-installed') return null;
 
   return (
     <button
       onClick={handleInstallClick}
       id="installBtn"
       style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000 }}
-      className="px-4 py-2 bg-blue-600 text-white rounded shadow-lg hover:bg-blue-700 transition"
+      className="px-4 py-2 bg-blue-600 text-white rounded shadow-lg hover:bg-blue-700 transition disabled:opacity-50"
+      disabled={installStatus === 'checking' || installStatus === 'https-required' || installStatus === 'sw-not-supported' || installStatus === 'manifest-missing'}
     >
-      Install App
+      {getButtonText()}
     </button>
   );
 }
