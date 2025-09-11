@@ -8,36 +8,57 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useRef } from 'react';
 function InstallButton() {
-  const btnRef = useRef(null);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isVisible, setIsVisible] = useState(true);
+
   useEffect(() => {
-    let deferredPrompt;
     function beforeInstallPrompt(e) {
       e.preventDefault();
-      deferredPrompt = e;
+      setDeferredPrompt(e);
+      setIsVisible(true);
     }
+
     window.addEventListener("beforeinstallprompt", beforeInstallPrompt);
-    
-    if (btnRef.current) {
-      btnRef.current.addEventListener("click", async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          console.log(`User response: ${outcome}`);
-          deferredPrompt = null;
-        } else {
-          // Fallback: try to install if already installed or no prompt available
-          console.log("Install prompt not available");
-        }
-      });
-    }
-    
+
     return () => {
       window.removeEventListener("beforeinstallprompt", beforeInstallPrompt);
     };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response: ${outcome}`);
+        setDeferredPrompt(null);
+        if (outcome === 'accepted') {
+          setIsVisible(false);
+        }
+      } catch (error) {
+        console.error('Error during installation:', error);
+      }
+    } else {
+      console.log("Install prompt not available. App may already be installed.");
+      // Try to open the app if it's already installed
+      if ('getInstalledRelatedApps' in navigator && typeof navigator.getInstalledRelatedApps === 'function') {
+        try {
+          const relatedApps = await navigator.getInstalledRelatedApps();
+          if (relatedApps.length > 0) {
+            console.log("App is already installed");
+          }
+        } catch (error) {
+          console.log("Could not check installed apps:", error);
+        }
+      }
+    }
+  };
+
+  if (!isVisible) return null;
+
   return (
     <button
-      ref={btnRef}
+      onClick={handleInstallClick}
       id="installBtn-settings"
       style={{ marginTop: 24 }}
       className="px-4 py-2 bg-blue-600 text-white rounded shadow-lg hover:bg-blue-700 transition"
