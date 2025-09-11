@@ -17,7 +17,7 @@ export const Logo: React.FC<LogoProps> = ({ className, size = 'md' }) => {
 
   return (
     <img 
-      src="/lovable-uploads/a6e4e070-ffc3-4804-b863-095bf5130e3d.png" 
+      src="/a6e4e070-ffc3-4804-b863-095bf5130e3d.png" 
       alt="AMC College Logo" 
       className={cn(
         'object-contain opacity-90 hover:opacity-100 transition-opacity duration-200',
