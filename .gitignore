@@ -1,0 +1,50 @@
+# Node
+node_modules/
+bun.lockb
+
+# Ignore android folder
+android/
+
+# Build output
+/dist/
+/build/
+/webapp/android/build/
+/android/build/
+
+# Vite
+.vite/
+
+# Capacitor
+android/local.properties
+android/.gradle/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Test coverage
+coverage/
+
+# Misc
+*.env
+.env.*
+
+# Uploads
+public/lovable-uploads/
+
+# Others
+*.swp
+*.swo
+
+# Ignore generated files
+src/**/*.js
+src/**/*.js.map
+
+# Ignore system files
+Thumbs.db
