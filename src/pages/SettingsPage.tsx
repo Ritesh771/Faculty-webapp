@@ -6,6 +6,39 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from '@/context/AuthContext';
+import { useEffect, useRef } from 'react';
+function InstallButton() {
+  const btnRef = useRef(null);
+  useEffect(() => {
+    let deferredPrompt;
+    function beforeInstallPrompt(e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (btnRef.current) btnRef.current.style.display = "block";
+      btnRef.current.addEventListener("click", async () => {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response: ${outcome}`);
+        deferredPrompt = null;
+        btnRef.current.style.display = "none";
+      });
+    }
+    window.addEventListener("beforeinstallprompt", beforeInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", beforeInstallPrompt);
+    };
+  }, []);
+  return (
+    <button
+      ref={btnRef}
+      id="installBtn-settings"
+      style={{ display: "none", marginTop: 24 }}
+      className="px-4 py-2 bg-blue-600 text-white rounded shadow-lg hover:bg-blue-700 transition"
+    >
+      Install App
+    </button>
+  );
+}
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
@@ -16,6 +49,7 @@ const SettingsPage: React.FC = () => {
       <div className="space-y-4 sm:space-y-6 animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Settings</h1>
+          <InstallButton />
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

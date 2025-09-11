@@ -1,3 +1,36 @@
+import { useEffect, useRef } from "react";
+function InstallButton() {
+  const btnRef = useRef(null);
+  useEffect(() => {
+    let deferredPrompt;
+    function beforeInstallPrompt(e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (btnRef.current) btnRef.current.style.display = "block";
+      btnRef.current.addEventListener("click", async () => {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response: ${outcome}`);
+        deferredPrompt = null;
+        btnRef.current.style.display = "none";
+      });
+    }
+    window.addEventListener("beforeinstallprompt", beforeInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", beforeInstallPrompt);
+    };
+  }, []);
+  return (
+    <button
+      ref={btnRef}
+      id="installBtn"
+      style={{ display: "none", position: "fixed", bottom: 24, right: 24, zIndex: 1000 }}
+      className="px-4 py-2 bg-blue-600 text-white rounded shadow-lg hover:bg-blue-700 transition"
+    >
+      Install App
+    </button>
+  );
+}
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -105,6 +138,7 @@ const App = () => {
               {/* Catch all 404 route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <InstallButton />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
