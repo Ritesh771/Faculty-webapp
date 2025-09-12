@@ -71,6 +71,7 @@ export const FacultyDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [proctorCount, setProctorCount] = useState<number | null>(null);
   const [notificationCount, setNotificationCount] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     (async () => {
@@ -96,6 +97,15 @@ export const FacultyDashboard: React.FC = () => {
         // ignore background count errors
       }
     })();
+  }, []);
+
+  // Update time every second for live time display
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
   
   const containerVariants = {
@@ -206,6 +216,151 @@ export const FacultyDashboard: React.FC = () => {
           <CardContent className="relative z-10">
             <div className="text-lg sm:text-2xl font-bold text-purple-900">{normalizedOverview.new_notifications}</div>
             <p className="text-xs text-purple-600 mt-1">New notifications</p>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Ongoing Class Card */}
+      <motion.div variants={itemVariants}>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-400/10 to-red-600/10"></div>
+          <CardHeader className="relative z-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base sm:text-lg text-red-900 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  Ongoing Class
+                </CardTitle>
+                <CardDescription className="text-red-700">
+                  Currently in session
+                </CardDescription>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl sm:text-3xl font-bold text-red-900" id="live-time">
+                  {currentTime.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit',
+                    hour12: true 
+                  })}
+                </div>
+                <div className="text-xs text-red-600">Live Time</div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="relative z-10">
+            {normalizedOverview.today_classes.length > 0 ? (
+              <div className="space-y-3">
+                {normalizedOverview.today_classes.map((classInfo, index) => {
+                  const now = currentTime;
+                  const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+                  
+                  // Parse class times (assuming format like "09:00" or "9:00 AM")
+                  const parseTime = (timeStr: string) => {
+                    if (!timeStr) return null;
+                    const time = timeStr.replace(/[^\d:]/g, '');
+                    const [hours, minutes] = time.split(':').map(Number);
+                    return hours * 60 + (minutes || 0);
+                  };
+                  
+                  const startTime = parseTime(classInfo.start_time);
+                  const endTime = parseTime(classInfo.end_time);
+                  
+                  const isOngoing = startTime && endTime && 
+                    currentTimeMinutes >= startTime && currentTimeMinutes <= endTime;
+                  
+                  if (!isOngoing) return null;
+                  
+                  return (
+                    <motion.div 
+                      key={index}
+                      className="bg-white/50 rounded-lg p-4 border border-red-200"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-lg text-red-900">{classInfo.subject}</h4>
+                          <div className="flex flex-wrap items-center mt-2 text-sm text-red-700 gap-4">
+                            <div className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>{classInfo.start_time} - {classInfo.end_time}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                              <span>{classInfo.room}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <span>{classInfo.section}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                          <div className="text-center">
+                            <div className="text-sm font-medium text-red-900">Duration</div>
+                            <div className="text-xs text-red-600">
+                              {startTime && endTime ? 
+                                `${Math.floor((endTime - currentTimeMinutes) / 60)}h ${(endTime - currentTimeMinutes) % 60}m left` : 
+                                'Time unknown'
+                              }
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            onClick={() => {
+                              const params = new URLSearchParams({ subject: classInfo.subject });
+                              if (classInfo.section) params.append('section', classInfo.section);
+                              if (classInfo.semester != null) params.append('semester', String(classInfo.semester));
+                              navigate(`/dashboard/take-attendance?${params.toString()}`);
+                            }}
+                          >
+                            Join Class
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+                {normalizedOverview.today_classes.every((classInfo) => {
+                  const now = currentTime;
+                  const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+                  const parseTime = (timeStr: string) => {
+                    if (!timeStr) return null;
+                    const time = timeStr.replace(/[^\d:]/g, '');
+                    const [hours, minutes] = time.split(':').map(Number);
+                    return hours * 60 + (minutes || 0);
+                  };
+                  const startTime = parseTime(classInfo.start_time);
+                  const endTime = parseTime(classInfo.end_time);
+                  return !(startTime && endTime && currentTimeMinutes >= startTime && currentTimeMinutes <= endTime);
+                }) && (
+                  <div className="text-center py-8 text-red-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm">No ongoing classes at the moment</p>
+                    <p className="text-xs mt-1">Check your schedule for upcoming classes</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-red-600">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm">No classes scheduled for today</p>
+                <p className="text-xs mt-1">Enjoy your free time!</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
