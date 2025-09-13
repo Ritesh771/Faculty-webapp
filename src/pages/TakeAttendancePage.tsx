@@ -20,7 +20,6 @@ const TakeAttendancePage: React.FC = () => {
   
   const [students, setStudents] = useState<Array<ClassStudent & { status: 'present' | 'absent' | 'late' }>>([]);
   const [loading, setLoading] = useState(false);
-  const [fetchingStudents, setFetchingStudents] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -298,7 +297,7 @@ const TakeAttendancePage: React.FC = () => {
                 Student Attendance - {selectedSubject} ({selectedSection})
               </CardTitle>
               <CardDescription>
-                {fetchingStudents ? "Loading students..." : `${students.length} students loaded. Tap on a student to mark their attendance status`}
+                Tap on a student to mark their attendance status
               </CardDescription>
             </CardHeader>
             <CardContent>
