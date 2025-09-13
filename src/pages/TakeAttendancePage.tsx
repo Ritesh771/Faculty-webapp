@@ -15,7 +15,6 @@ const TakeAttendancePage: React.FC = () => {
   const location = useLocation();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedSection, setSelectedSection] = useState('');
   const [assignments, setAssignments] = useState<any[]>([]);
   const [classMeta, setClassMeta] = useState<{ branch_id?: number; semester_id?: number; section_id?: number; subject_id?: number } | null>(null);
   
@@ -54,7 +53,6 @@ const TakeAttendancePage: React.FC = () => {
       // Trigger same flow as manual selection
       (async () => {
         setSelectedSubject(match.subject_name);
-        setSelectedSection(`${match.section_id}`);
         const meta = { branch_id: match.branch_id, semester_id: match.semester_id, section_id: match.section_id, subject_id: match.subject_id };
         setClassMeta(meta);
         const list = await getStudentsForClass(match.branch_id, match.semester_id, match.section_id, match.subject_id);
@@ -76,9 +74,7 @@ const TakeAttendancePage: React.FC = () => {
   // Get sections for selected subject
   const availableSections = useMemo(() => {
     if (!selectedSubject) return [];
-    const sections = assignments.filter(a => a.subject_name === selectedSubject);
-    console.log('Available sections for', selectedSubject, ':', sections);
-    return sections;
+    return assignments.filter(a => a.subject_name === selectedSubject);
   }, [assignments, selectedSubject]);
 
   const toggleAttendance = (studentId: number, status: 'present' | 'absent' | 'late') => {
@@ -86,10 +82,10 @@ const TakeAttendancePage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedSubject || !selectedSection || !classMeta) {
+    if (!selectedSubject || !classMeta) {
       toast({
         title: "Error",
-        description: "Please select a subject and section first.",
+        description: "Please select a subject first.",
         variant: "destructive"
       });
       return;
@@ -171,7 +167,7 @@ const TakeAttendancePage: React.FC = () => {
             <CardTitle className="text-lg">Class Details</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Date</label>
                 <input
@@ -196,17 +192,11 @@ const TakeAttendancePage: React.FC = () => {
                     <SelectValue placeholder="Select Subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {assignments.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-gray-500">Loading subjects...</div>
-                    ) : availableSubjects.length > 0 ? (
-                      availableSubjects.map((a) => (
-                        <SelectItem key={a.subject_id} value={a.subject_name}>
-                          {a.subject_name} ({a.subject_code})
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="px-2 py-1.5 text-sm text-gray-500">No subjects available</div>
-                    )}
+                    {availableSubjects.map((a) => (
+                      <SelectItem key={a.subject_id} value={a.subject_name}>
+                        {a.subject_name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -215,66 +205,33 @@ const TakeAttendancePage: React.FC = () => {
                 <Select 
                   value={selectedSection} 
                   onValueChange={async (val) => {
-                    console.log('Section selected:', val);
                     setSelectedSection(val);
                     const assignment = availableSections.find(a => `${a.section_id}` === val);
-                    console.log('Found assignment:', assignment);
                     if (assignment) {
-                      setFetchingStudents(true);
-                      try {
-                        const meta = { 
-                          branch_id: assignment.branch_id, 
-                          semester_id: assignment.semester_id, 
-                          section_id: assignment.section_id, 
-                          subject_id: assignment.subject_id 
-                        };
-                        console.log('Fetching students with meta:', meta);
-                        setClassMeta(meta);
-                        const list = await getStudentsForClass(assignment.branch_id, assignment.semester_id, assignment.section_id, assignment.subject_id);
-                        console.log('Fetched students:', list.length);
-                        const withStatus = list.map(s => ({ ...s, status: 'present' as const }));
-                        setStudents(withStatus);
-                        setAttendance(withStatus.reduce((acc, s) => ({ ...acc, [s.id]: 'present' }), {}));
-                      } catch (error) {
-                        console.error('Error fetching students:', error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to fetch students for the selected section.",
-                          variant: "destructive"
-                        });
-                        setStudents([]);
-                        setAttendance({});
-                      } finally {
-                        setFetchingStudents(false);
-                      }
-                    } else {
-                      console.error('No assignment found for section:', val);
-                      toast({
-                        title: "Error",
-                        description: "Invalid section selection.",
-                        variant: "destructive"
-                      });
+                      const meta = { 
+                        branch_id: assignment.branch_id, 
+                        semester_id: assignment.semester_id, 
+                        section_id: assignment.section_id, 
+                        subject_id: assignment.subject_id 
+                      };
+                      setClassMeta(meta);
+                      const list = await getStudentsForClass(assignment.branch_id, assignment.semester_id, assignment.section_id, assignment.subject_id);
+                      const withStatus = list.map(s => ({ ...s, status: 'present' as const }));
+                      setStudents(withStatus);
+                      setAttendance(withStatus.reduce((acc, s) => ({ ...acc, [s.id]: 'present' }), {}));
                     }
                   }}
                   disabled={!selectedSubject}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Section" />
+                    <SelectValue placeholder="Select Subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {assignments.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-gray-500">Loading sections...</div>
-                    ) : availableSections.length > 0 ? (
-                      availableSections.map((a) => (
-                        <SelectItem key={a.section_id} value={`${a.section_id}`}>
-                          {a.section} - Semester {a.semester} ({a.branch}) - {a.subject_code}
-                        </SelectItem>
-                      ))
-                    ) : selectedSubject ? (
-                      <div className="px-2 py-1.5 text-sm text-gray-500">No sections available for this subject</div>
-                    ) : (
-                      <div className="px-2 py-1.5 text-sm text-gray-500">Please select a subject first</div>
-                    )}
+                    {availableSections.map((a) => (
+                      <SelectItem key={a.section_id} value={`${a.section_id}`}>
+                        {a.section}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -284,7 +241,7 @@ const TakeAttendancePage: React.FC = () => {
       </motion.div>
 
       {/* Summary */}
-      {selectedSubject && selectedSection && (
+      {selectedSubject && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -328,7 +285,7 @@ const TakeAttendancePage: React.FC = () => {
       )}
 
       {/* Student List */}
-      {selectedSubject && selectedSection && (
+      {selectedSubject && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -338,67 +295,55 @@ const TakeAttendancePage: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Student Attendance - {selectedSubject} 
-                {selectedSection && availableSections.find(a => `${a.section_id}` === selectedSection) && (
-                  <span className="text-sm font-normal">
-                    ({availableSections.find(a => `${a.section_id}` === selectedSection)?.section} - Semester {availableSections.find(a => `${a.section_id}` === selectedSection)?.semester})
-                  </span>
-                )}
+                Student Attendance - {selectedSubject} ({selectedSection})
               </CardTitle>
               <CardDescription>
                 {fetchingStudents ? "Loading students..." : `${students.length} students loaded. Tap on a student to mark their attendance status`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {fetchingStudents ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                  <span className="ml-2">Loading students...</span>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {students.map((student, index) => (
-                    <motion.div
-                      key={student.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      className="border rounded-lg p-4"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{student.name}</h4>
-                          <p className="text-sm text-gray-600">{student.usn}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          {(['present', 'absent', 'late'] as const).map((status) => (
-                            <Button
-                              key={status}
-                              variant={attendance[student.id] === status ? "default" : "outline"}
-                              size="sm"
-                              className={`flex items-center gap-1 ${
-                                attendance[student.id] === status 
-                                  ? getStatusColor(status) + ' text-white hover:' + getStatusColor(status)
-                                  : ''
-                              }`}
-                              onClick={() => toggleAttendance(student.id, status)}
-                            >
-                              {getStatusIcon(status)}
-                              <span className="capitalize">{status}</span>
-                            </Button>
-                          ))}
-                        </div>
+              <div className="space-y-3">
+                {students.map((student, index) => (
+                  <motion.div
+                    key={student.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="border rounded-lg p-4"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{student.name}</h4>
+                        <p className="text-sm text-gray-600">{student.usn}</p>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+                      <div className="flex gap-2">
+                        {(['present', 'absent', 'late'] as const).map((status) => (
+                          <Button
+                            key={status}
+                            variant={attendance[student.id] === status ? "default" : "outline"}
+                            size="sm"
+                            className={`flex items-center gap-1 ${
+                              attendance[student.id] === status 
+                                ? getStatusColor(status) + ' text-white hover:' + getStatusColor(status)
+                                : ''
+                            }`}
+                            onClick={() => toggleAttendance(student.id, status)}
+                          >
+                            {getStatusIcon(status)}
+                            <span className="capitalize">{status}</span>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
 
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <Button 
                   onClick={handleSubmit}
                   className="flex-1 sm:flex-none"
-                  disabled={!selectedSubject || !selectedSection || loading || fetchingStudents}
+                  disabled={!selectedSubject || !selectedSection || loading}
                 >
                   {loading ? 'Submitting...' : 'Submit Attendance'}
                 </Button>
