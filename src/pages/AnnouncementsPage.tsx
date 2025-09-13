@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Bell, Calendar, User, Filter } from 'lucide-react';
 import { getFacultyNotifications, getFacultySentNotifications } from '@/utils/faculty_api';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const AnnouncementsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [received, setReceived] = useState<any[]>([]);
   const [sent, setSent] = useState<any[]>([]);
+  const { showNotification } = useNotifications();
 
   useEffect(() => {
     (async () => {
@@ -20,10 +22,20 @@ const AnnouncementsPage: React.FC = () => {
         getFacultyNotifications(),
         getFacultySentNotifications(),
       ]);
-      if (rec?.success && rec?.data) setReceived(rec.data);
+      if (rec?.success && rec?.data) {
+        setReceived(rec.data);
+        // Play notification sound for new announcements
+        if (rec.data.length > 0) {
+          await showNotification({
+            title: 'New Announcements',
+            body: `You have ${rec.data.length} new announcement${rec.data.length > 1 ? 's' : ''}`,
+            type: 'default'
+          });
+        }
+      }
       if (snt?.success && snt?.data) setSent(snt.data);
     })();
-  }, []);
+  }, [showNotification]);
 
   const normalize = (n: any, idx: number, source: 'received' | 'sent') => ({
     id: n.id || `${source}-${idx}`,

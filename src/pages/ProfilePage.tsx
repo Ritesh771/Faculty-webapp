@@ -10,12 +10,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { User, Mail, Phone, Edit, Lock, Camera } from 'lucide-react';
 import { getFacultyProfile, manageProfile } from '@/utils/faculty_api';
+import FileUpload from '@/components/FileUpload';
 
 const ProfilePage: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
   
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -124,7 +128,7 @@ const ProfilePage: React.FC = () => {
                 transition={{ duration: 0.2 }}
               >
                 <Avatar className="w-24 h-24 mx-auto">
-                  <AvatarImage src="/placeholder.svg" alt="Profile" />
+                  <AvatarImage src={profilePicturePreview || "/placeholder.svg"} alt="Profile" />
                   <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                     {profileData.name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
@@ -132,6 +136,7 @@ const ProfilePage: React.FC = () => {
                 <Button
                   size="sm"
                   className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0 bg-blue-500 hover:bg-blue-600"
+                  onClick={() => setShowPhotoUpload(!showPhotoUpload)}
                 >
                   <Camera className="h-4 w-4" />
                 </Button>
@@ -140,10 +145,47 @@ const ProfilePage: React.FC = () => {
                 <h3 className="font-semibold text-lg">{profileData.name}</h3>
                 <p className="text-sm text-gray-600 capitalize">{user?.role} Administrator</p>
               </div>
-              <Button variant="outline" size="sm" className="w-full">
-                <Camera className="h-4 w-4 mr-2" />
-                Change Photo
-              </Button>
+
+              {showPhotoUpload && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2"
+                >
+                  <FileUpload
+                    onFileSelect={(files) => {
+                      if (files.length > 0) {
+                        const file = files[0];
+                        setProfilePicture(file);
+                        setProfilePicturePreview(URL.createObjectURL(file));
+                        setShowPhotoUpload(false);
+                        toast({
+                          title: "Profile picture selected",
+                          description: "Click save to update your profile picture."
+                        });
+                      }
+                    }}
+                    accept="image/*"
+                    multiple={false}
+                    maxSize={5}
+                    showCamera={true}
+                    className="w-full"
+                  />
+                </motion.div>
+              )}
+
+              {!showPhotoUpload && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setShowPhotoUpload(true)}
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Change Photo
+                </Button>
+              )}
             </CardContent>
           </Card>
         </motion.div>

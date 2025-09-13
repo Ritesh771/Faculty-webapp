@@ -1,0 +1,1 @@
+can you create a expo go react native app by mirroring and cloning this exact UI and create all the pages correctly and also fetch the data from the backend and all the layout functionality appearence should be same as this webapp ui and the expogo app should be react native and mobile first design correctly , create a seperate folder named expogo and create it 

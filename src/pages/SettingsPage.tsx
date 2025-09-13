@@ -185,6 +185,17 @@ const SettingsPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium">Sound Notifications</h3>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="sound-enabled" className="text-sm">Enable notification sounds</Label>
+                    <Switch id="sound-enabled" defaultChecked={true} />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Play sounds when receiving notifications, messages, and system alerts
+                  </p>
+                </div>
               </CardContent>
               <CardFooter className="flex flex-col sm:flex-row justify-end gap-2">
                 <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
