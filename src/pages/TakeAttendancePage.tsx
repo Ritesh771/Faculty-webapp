@@ -15,6 +15,7 @@ const TakeAttendancePage: React.FC = () => {
   const location = useLocation();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
   const [assignments, setAssignments] = useState<any[]>([]);
   const [classMeta, setClassMeta] = useState<{ branch_id?: number; semester_id?: number; section_id?: number; subject_id?: number } | null>(null);
   
@@ -52,6 +53,7 @@ const TakeAttendancePage: React.FC = () => {
       // Trigger same flow as manual selection
       (async () => {
         setSelectedSubject(match.subject_name);
+        setSelectedSection(`${match.section_id}`);
         const meta = { branch_id: match.branch_id, semester_id: match.semester_id, section_id: match.section_id, subject_id: match.subject_id };
         setClassMeta(meta);
         const list = await getStudentsForClass(match.branch_id, match.semester_id, match.section_id, match.subject_id);
@@ -64,15 +66,27 @@ const TakeAttendancePage: React.FC = () => {
 
   const [attendance, setAttendance] = useState<Record<number, 'present' | 'absent' | 'late'>>({});
 
-  const toggleAttendance = (studentId: number, status: string) => {
+  // Get unique subjects from assignments
+  const availableSubjects = useMemo(() => {
+    const subjects = Array.from(new Map(assignments.map(a => [a.subject_name, a])).values());
+    return subjects;
+  }, [assignments]);
+
+  // Get sections for selected subject
+  const availableSections = useMemo(() => {
+    if (!selectedSubject) return [];
+    return assignments.filter(a => a.subject_name === selectedSubject);
+  }, [assignments, selectedSubject]);
+
+  const toggleAttendance = (studentId: number, status: 'present' | 'absent' | 'late') => {
     setAttendance(prev => ({ ...prev, [studentId]: status }));
   };
 
   const handleSubmit = async () => {
-    if (!selectedSubject || !classMeta) {
+    if (!selectedSubject || !selectedSection || !classMeta) {
       toast({
         title: "Error",
-        description: "Please select a subject first.",
+        description: "Please select a subject and section first.",
         variant: "destructive"
       });
       return;
@@ -154,7 +168,7 @@ const TakeAttendancePage: React.FC = () => {
             <CardTitle className="text-lg">Class Details</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Date</label>
                 <input
@@ -166,25 +180,57 @@ const TakeAttendancePage: React.FC = () => {
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Subject</label>
-                <Select value={selectedSubject} onValueChange={async (val) => {
-                  setSelectedSubject(val);
-                  const a = assignments.find(x => x.subject_name === val);
-                  if (a) {
-                    const meta = { branch_id: a.branch_id, semester_id: a.semester_id, section_id: a.section_id, subject_id: a.subject_id };
-                    setClassMeta(meta);
-                    const list = await getStudentsForClass(a.branch_id, a.semester_id, a.section_id, a.subject_id);
-                    const withStatus = list.map(s => ({ ...s, status: 'present' as const }));
-                    setStudents(withStatus);
-                    setAttendance(withStatus.reduce((acc, s) => ({ ...acc, [s.id]: 'present' }), {}));
-                  }
-                }}>
+                <Select 
+                  value={selectedSubject} 
+                  onValueChange={(val) => {
+                    setSelectedSubject(val);
+                    setSelectedSection(''); // Reset section when subject changes
+                    setStudents([]); // Clear students
+                    setClassMeta(null); // Clear class meta
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {assignments.map((a) => (
-                      <SelectItem key={`${a.subject_id}-${a.section_id}`} value={a.subject_name}>
-                        {a.subject_name} • {a.section}
+                    {availableSubjects.map((a) => (
+                      <SelectItem key={a.subject_id} value={a.subject_name}>
+                        {a.subject_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Section</label>
+                <Select 
+                  value={selectedSection} 
+                  onValueChange={async (val) => {
+                    setSelectedSection(val);
+                    const assignment = availableSections.find(a => `${a.section_id}` === val);
+                    if (assignment) {
+                      const meta = { 
+                        branch_id: assignment.branch_id, 
+                        semester_id: assignment.semester_id, 
+                        section_id: assignment.section_id, 
+                        subject_id: assignment.subject_id 
+                      };
+                      setClassMeta(meta);
+                      const list = await getStudentsForClass(assignment.branch_id, assignment.semester_id, assignment.section_id, assignment.subject_id);
+                      const withStatus = list.map(s => ({ ...s, status: 'present' as const }));
+                      setStudents(withStatus);
+                      setAttendance(withStatus.reduce((acc, s) => ({ ...acc, [s.id]: 'present' }), {}));
+                    }
+                  }}
+                  disabled={!selectedSubject}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSections.map((a) => (
+                      <SelectItem key={a.section_id} value={`${a.section_id}`}>
+                        {a.section}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -196,7 +242,7 @@ const TakeAttendancePage: React.FC = () => {
       </motion.div>
 
       {/* Summary */}
-      {selectedSubject && (
+      {selectedSubject && selectedSection && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -240,7 +286,7 @@ const TakeAttendancePage: React.FC = () => {
       )}
 
       {/* Student List */}
-      {selectedSubject && (
+      {selectedSubject && selectedSection && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -250,7 +296,7 @@ const TakeAttendancePage: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Student Attendance - {selectedSubject}
+                Student Attendance - {selectedSubject} ({selectedSection})
               </CardTitle>
               <CardDescription>
                 Tap on a student to mark their attendance status
@@ -272,7 +318,7 @@ const TakeAttendancePage: React.FC = () => {
                         <p className="text-sm text-gray-600">{student.usn}</p>
                       </div>
                       <div className="flex gap-2">
-                        {['present', 'absent', 'late'].map((status) => (
+                        {(['present', 'absent', 'late'] as const).map((status) => (
                           <Button
                             key={status}
                             variant={attendance[student.id] === status ? "default" : "outline"}
@@ -298,7 +344,7 @@ const TakeAttendancePage: React.FC = () => {
                 <Button 
                   onClick={handleSubmit}
                   className="flex-1 sm:flex-none"
-                  disabled={!selectedSubject || loading}
+                  disabled={!selectedSubject || !selectedSection || loading}
                 >
                   {loading ? 'Submitting...' : 'Submit Attendance'}
                 </Button>

@@ -6,6 +6,8 @@ export const getApiBaseUrl = (): string => {
   return (stored && stored.trim()) ? stored : DEFAULT_API_BASE_URL;
 };
 
+export const API_BASE_URL = getApiBaseUrl();
+
 export const setApiBaseUrl = (url: string): void => {
   try {
     const trimmed = (url || "").trim().replace(/\/$/, "");
