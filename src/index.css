@@ -5,6 +5,12 @@
 
 @layer base {
   :root {
+    /* Safe area fallback variables for notch/status bars on iOS/Android */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+
     /* Premium Color Palette */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
@@ -137,6 +143,10 @@
   
   body {
     @apply bg-background text-foreground;
+    /* Removed padding-top to avoid conflict with fixed header - header handles safe area now */
+    padding-bottom: var(--safe-bottom);
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   
@@ -174,6 +184,21 @@
     /* Ensure grid items don't overflow */
     .grid > * {
       min-width: 0;
+    }
+  }
+  
+  /* Mobile safe area fallbacks for WebView/TWA compatibility */
+  @media (max-width: 768px) and (orientation: portrait) {
+    :root {
+      --safe-top: 20px; /* iOS status bar fallback */
+      --safe-bottom: 34px; /* iOS home indicator fallback */
+    }
+  }
+  
+  @media (max-width: 768px) and (orientation: landscape) {
+    :root {
+      --safe-top: 0px;
+      --safe-bottom: 21px;
     }
   }
 }

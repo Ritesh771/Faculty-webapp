@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AttendanceChart } from '../charts/AttendanceChart';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { getDashboardOverview, getProctorStudents, getFacultyNotifications } from '@/utils/faculty_api';
+import { getDashboardOverview, getProctorStudents, getFacultyNotifications, getFacultyDashboardBootstrap } from '@/utils/faculty_api';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Legend } from 'recharts';
 
 interface AttendanceStatRaw {
@@ -81,14 +81,14 @@ export const FacultyDashboard: React.FC = () => {
         setOverview(data);
         setAttendanceData(transformChartData(data?.stats || data?.attendance_stats || []));
       }
-      // Fetch live counts
+      // Fetch live counts using optimized bootstrap API
       try {
-        const [proctors, notifs] = await Promise.all([
-          getProctorStudents(),
+        const [bootstrapRes, notifs] = await Promise.all([
+          getFacultyDashboardBootstrap(),
           getFacultyNotifications(),
         ]);
-        if (proctors?.success && Array.isArray(proctors.data)) {
-          setProctorCount(proctors.data.length);
+        if (bootstrapRes?.success && bootstrapRes.data) {
+          setProctorCount(bootstrapRes.data.proctor_students.length);
         }
         if (notifs?.success && Array.isArray(notifs.data)) {
           setNotificationCount(notifs.data.length);

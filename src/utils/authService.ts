@@ -80,6 +80,11 @@ export const fetchWithTokenRefresh = async (url: string, options: RequestInit): 
       Authorization: `Bearer ${accessToken}`,
       'ngrok-skip-browser-warning': 'true',
     };
+    // Add cache-busting parameter for GET requests
+    if (options.method === 'GET' || !options.method) {
+      const separator = url.includes('?') ? '&' : '?';
+      url = `${url}${separator}_t=${Date.now()}`;
+    }
     const response = await fetch(url, options);
 
     if (response.status === 401) {
@@ -94,6 +99,11 @@ export const fetchWithTokenRefresh = async (url: string, options: RequestInit): 
           Authorization: `Bearer ${refreshResult.access}`,
           'ngrok-skip-browser-warning': 'true',
         };
+        // Add cache-busting parameter for GET requests
+        if (options.method === 'GET' || !options.method) {
+          const separator = url.includes('?') ? '&' : '?';
+          url = `${url}${separator}_t=${Date.now()}`;
+        }
         return fetch(url, options);
       } else {
         localStorage.clear();

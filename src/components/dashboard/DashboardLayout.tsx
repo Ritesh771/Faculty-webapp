@@ -6,11 +6,16 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/ui/logo';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export const DashboardLayout: React.FC = () => {
   const { user, loading } = useAuth();
+  const isMobile = useIsMobile();
+
+  console.log('DashboardLayout - auth state:', { user, loading });
 
   if (loading) {
+    console.log('DashboardLayout - showing loading state');
     return (
       <div className="flex h-screen w-full items-center justify-center px-4">
         <div className="flex flex-col items-center space-y-4 text-center">
@@ -25,18 +30,20 @@ export const DashboardLayout: React.FC = () => {
   }
 
   if (!user) {
+    console.log('DashboardLayout - no user, redirecting to login');
     return <Navigate to="/auth/login" replace />;
   }
 
+  console.log('DashboardLayout - user found, rendering dashboard');
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50 overflow-hidden">
         <SideNav />
         <SidebarInset className="flex-1 flex flex-col min-w-0">
           <AppHeader />
-          <main className="flex-1 overflow-hidden">
-            <div className="h-[calc(100vh-4rem)] overflow-y-auto">
-              <div className="p-3 sm:p-4 md:p-6 lg:p-8 w-full max-w-full">
+          <main className="flex-1 overflow-hidden" style={{ marginTop: isMobile ? 'calc(3.5rem + var(--safe-top))' : 'calc(4rem + var(--safe-top))' }}>
+            <div className={`h-[calc(100vh-${isMobile ? '3.5rem' : '4rem'}-var(--safe-top))] overflow-y-auto`}>
+              <div className={`p-${isMobile ? '2' : '3'} sm:p-4 md:p-6 lg:p-8 w-full max-w-full`}>
                 <div className="max-w-full overflow-hidden">
                   <Outlet />
                 </div>

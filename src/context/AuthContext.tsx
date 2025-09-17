@@ -83,10 +83,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sessionStorage.setItem('pending_user_id', result.user_id);
         return { success: true, otpRequired: true, user_id: result.user_id };
       }
-      const storedProfile = localStorage.getItem('user');
-      const role = localStorage.getItem('role');
-      if (storedProfile && role === 'teacher') {
-        const profile: UserProfile = JSON.parse(storedProfile);
+      if (result.profile && result.role === 'teacher') {
+        const profile: UserProfile = result.profile;
         setUser({
           id: profile.user_id || '0',
           email: profile.email || '',
@@ -118,10 +116,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError(res.message || 'Invalid OTP');
         return false;
       }
-      const storedProfile = localStorage.getItem('user');
-      const role = localStorage.getItem('role');
-      if (storedProfile && role === 'teacher') {
-        const profile: UserProfile = JSON.parse(storedProfile);
+      if (res.profile && res.role === 'teacher') {
+        const profile: UserProfile = res.profile;
         setUser({
           id: profile.user_id || '0',
           email: profile.email || '',
@@ -161,6 +157,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     await logoutUser();
     setUser(null);
+    // Clear sessionStorage
+    sessionStorage.clear();
+    // Clear service worker cache
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+    }
   };
 
   return (

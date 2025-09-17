@@ -1,6 +1,94 @@
 import { getApiBaseUrl } from "./config";
 import { fetchWithTokenRefresh } from "./authService";
 
+// Type definitions for request and response data
+interface DashboardOverviewResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    today_classes: Array<{
+      subject: string;
+      section: string;
+      start_time: string;
+      end_time: string;
+      room: string;
+    }>;
+    attendance_snapshot: number;
+    quick_actions: string[];
+  };
+}
+
+export interface TakeAttendanceRequest {
+  branch_id: string;
+  subject_id: string;
+  section_id: string;
+  semester_id: string;
+  method: "manual" | "ai";
+  class_images?: File[];
+  attendance?: Array<{ student_id: string; status: boolean }>;
+}
+
+interface TakeAttendanceResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface UploadMarksRequest {
+  branch_id: string;
+  semester_id: string;
+  section_id: string;
+  subject_id: string;
+  test_number: number;
+  marks?: Array<{ student_id: string; mark: number }>;
+  file?: File;
+}
+
+interface UploadMarksResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface ApplyLeaveRequest {
+  branch_ids: string[];
+  start_date: string;
+  end_date: string;
+  reason: string;
+}
+
+interface ApplyLeaveResponse {
+  success: boolean;
+  message?: string;
+  data?: Array<{ id: string; branch: string }>;
+}
+
+interface ViewAttendanceRecordsResponse {
+  success: boolean;
+  message?: string;
+  data?: Array<{
+    student: string;
+    usn: string;
+    total_sessions: number;
+    present: number;
+    percentage: number;
+  }>;
+}
+
+export interface CreateAnnouncementRequest {
+  branch_id: string;
+  semester_id: string;
+  section_id: string;
+  title: string;
+  content: string;
+  target?: "student" | "faculty" | "both";
+  student_usns?: string[];
+}
+
+interface CreateAnnouncementResponse {
+  success: boolean;
+  message?: string;
+}
+
+// Update the ProctorStudent interface to match the new backend response
 export interface ProctorStudent {
   name: string;
   usn: string;
@@ -85,15 +173,289 @@ interface GetFacultyAssignmentsResponse {
   data?: FacultyAssignment[];
 }
 
-export interface LeaveRow {
+interface GetFacultyDashboardBootstrapResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    assignments: FacultyAssignment[];
+    proctor_students: ProctorStudent[];
+  };
+}
+
+interface AttendanceRecordSummary {
+  id: number;
+  date: string;
+  subject: string | null;
+  section: string | null;
+  semester: number | null;
+  branch: string | null;
+  file_path: string | null;
+  status: string;
+  branch_id: number | null;
+  section_id: number | null;
+  subject_id: number | null;
+  semester_id: number | null;
+  summary: {
+    present_count: number;
+    absent_count: number;
+    total_count: number;
+    present_percentage: number;
+  };
+}
+
+interface GetAttendanceRecordsWithSummaryResponse {
+  success: boolean;
+  message?: string;
+  data?: AttendanceRecordSummary[];
+}
+
+interface GetApplyLeaveBootstrapResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    assignments: FacultyAssignment[];
+    leave_requests: FacultyLeaveRequest[];
+    branches: { id: number; name: string }[];
+  };
+}
+
+interface GetTimetableResponse {
+  success: boolean;
+  message?: string;
+  data?: TimetableEntry[];
+}
+
+interface ChatChannel {
   id: string;
-  student_name: string;
+  type: string;
+  subject: string | null;
+  section: string | null;
+  participants: string[];
+}
+
+interface ManageChatResponse {
+  success: boolean;
+  message?: string;
+  data?: ChatChannel[];
+}
+
+interface SendChatMessageRequest {
+  channel_id?: string;
+  message: string;
+  type?: "subject" | "proctor" | "faculty";
+  branch_id?: string;
+  semester_id?: string;
+  subject_id?: string;
+  section_id?: string;
+}
+
+export interface ManageProfileRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  profile_picture?: File;
+}
+
+interface ManageProfileResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    username: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    profile_picture: string | null;
+  };
+}
+
+interface ScheduleMentoringRequest {
+  student_id: string;
+  date: string;
+  purpose: string;
+}
+
+interface ScheduleMentoringResponse {
+  success: boolean;
+  message?: string;
+}
+
+interface GenerateStatisticsResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    pdf_url: string;
+    stats: Array<{ student__name: string; percentage: number }>;
+  };
+}
+
+interface DownloadPDFResponse {
+  success: boolean;
+  message?: string;
+  file_url?: string;
+}
+
+export interface ClassStudent {
+  id: number;
+  name: string;
   usn: string;
+}
+
+export interface InternalMarkStudent {
+  id: number;
+  name: string;
+  usn: string;
+  mark: number | '';
+  max_mark: number;
+}
+
+export interface FacultyLeaveRequest {
+  id: string;
+  branch: string;
   start_date: string;
   end_date: string;
   reason: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  status: string;
+  applied_on: string;
+  reviewed_by?: string | null;
 }
+
+
+
+// Faculty-specific API functions
+export const getDashboardOverview = async (): Promise<DashboardOverviewResponse> => {
+  try {
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/dashboard/`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Get Dashboard Overview Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const takeAttendance = async (
+  data: TakeAttendanceRequest
+): Promise<TakeAttendanceResponse> => {
+  try {
+    const formData = new FormData();
+    formData.append("branch_id", data.branch_id);
+    formData.append("subject_id", data.subject_id);
+    formData.append("section_id", data.section_id);
+    formData.append("semester_id", data.semester_id);
+    formData.append("method", data.method);
+    if (data.method === "ai" && data.class_images) {
+      data.class_images.forEach((file, index) => {
+        formData.append(`class_images[${index}]`, file);
+      });
+    }
+    if (data.method === "manual" && data.attendance) {
+      formData.append("attendance", JSON.stringify(data.attendance));
+    }
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/take-attendance/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      },
+      body: formData,
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Take Attendance Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const uploadInternalMarks = async (
+  data: UploadMarksRequest
+): Promise<UploadMarksResponse> => {
+  try {
+    const formData = new FormData();
+    formData.append("branch_id", data.branch_id);
+    formData.append("semester_id", data.semester_id);
+    formData.append("section_id", data.section_id);
+    formData.append("subject_id", data.subject_id);
+    formData.append("test_number", data.test_number.toString());
+    if (data.marks) {
+      formData.append("marks", JSON.stringify(data.marks));
+    }
+    if (data.file) {
+      formData.append("file", data.file);
+    }
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/upload-marks/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      },
+      body: formData,
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Upload Internal Marks Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const applyLeave = async (
+  data: ApplyLeaveRequest
+): Promise<ApplyLeaveResponse> => {
+  try {
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/apply-leave/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Apply Leave Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const viewAttendanceRecords = async (
+  params: { branch_id: string; semester_id: string; section_id: string; subject_id: string }
+): Promise<ViewAttendanceRecordsResponse> => {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/attendance-records/?${query}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("View Attendance Records Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const createAnnouncement = async (
+  data: CreateAnnouncementRequest
+): Promise<CreateAnnouncementResponse> => {
+  try {
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/announcements/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Create Announcement Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
 
 export const getProctorStudents = async (): Promise<GetProctorStudentsResponse> => {
   try {
@@ -102,7 +464,6 @@ export const getProctorStudents = async (): Promise<GetProctorStudentsResponse> 
       headers: {
         Authorization: `Bearer ${localStorage.getItem("access_token")}`,
         "Content-Type": "application/json",
-        'ngrok-skip-browser-warning': 'true',
       },
     });
     return await response.json();
@@ -128,171 +489,184 @@ export const getFacultyAssignments = async (): Promise<GetFacultyAssignmentsResp
   }
 };
 
-export const getTimetable = async () => {
+export const getFacultyDashboardBootstrap = async (): Promise<GetFacultyDashboardBootstrapResponse> => {
+  try {
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/dashboard/bootstrap/`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Get Faculty Dashboard Bootstrap Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const getAttendanceRecordsWithSummary = async (): Promise<GetAttendanceRecordsWithSummaryResponse> => {
+  try {
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/attendance-records/summary/`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Get Attendance Records With Summary Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const getApplyLeaveBootstrap = async (): Promise<GetApplyLeaveBootstrapResponse> => {
+  try {
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/apply-leave/bootstrap/`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Get Apply Leave Bootstrap Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const getTimetable = async (): Promise<GetTimetableResponse> => {
   try {
     const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/timetable/`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
       },
     });
     return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
+  } catch (error) {
+    console.error("Get Timetable Error:", error);
+    return { success: false, message: "Network error" };
   }
 };
 
-export const getDashboardOverview = async () => {
+export const manageChat = async (
+  data: SendChatMessageRequest,
+  method: "GET" | "POST" = "GET"
+): Promise<ManageChatResponse> => {
   try {
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/dashboard/`, {
-      method: 'GET',
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/chat/`, {
+      method,
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
       },
+      body: method === "POST" ? JSON.stringify(data) : undefined,
     });
     return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
+  } catch (error) {
+    console.error("Manage Chat Error:", error);
+    return { success: false, message: "Network error" };
   }
 };
 
-export interface FacultyLeaveRequest {
-  id: string;
-  branch: string;
-  start_date: string;
-  end_date: string;
-  reason: string;
-  status: string;
-  applied_on: string;
-  reviewed_by?: string | null;
-}
-
-export const getFacultyLeaveRequests = async (): Promise<FacultyLeaveRequest[]> => {
-  const res = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/leave-requests/`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.message || 'Failed to fetch leave requests');
-  return data.data;
-};
-
-export const manageStudentLeave = async ({ leave_id, action }: { leave_id: string; action: 'APPROVE' | 'REJECT' }) => {
-  const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/manage-student-leave/`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ leave_id, action }),
-  });
-  return await response.json();
-};
-
-export const applyLeave = async (data: { branch_ids: string[]; start_date: string; end_date: string; reason: string }) => {
+export const manageProfile = async (
+  data: ManageProfileRequest
+): Promise<ManageProfileResponse> => {
   try {
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/apply-leave/`, {
-      method: 'POST',
+    const formData = new FormData();
+    if (data.first_name) formData.append("first_name", data.first_name);
+    if (data.last_name) formData.append("last_name", data.last_name);
+    if (data.email) formData.append("email", data.email);
+    if (data.profile_picture) formData.append("profile_picture", data.profile_picture);
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/profile/`, {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      },
+      body: formData,
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Manage Profile Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const scheduleMentoring = async (
+  data: ScheduleMentoringRequest
+): Promise<ScheduleMentoringResponse> => {
+  try {
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/schedule-mentoring/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
     });
     return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
+  } catch (error) {
+    console.error("Schedule Mentoring Error:", error);
+    return { success: false, message: "Network error" };
   }
 };
 
-export const getFacultyProfile = async () => {
+export const generateStatistics = async (
+  params: { file_id: string }
+): Promise<GenerateStatisticsResponse> => {
   try {
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/profile/`, {
-      method: 'GET',
+    const query = new URLSearchParams(params).toString();
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/generate-statistics/?${query}`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
       },
     });
     return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
+  } catch (error) {
+    console.error("Generate Statistics Error:", error);
+    return { success: false, message: "Network error" };
   }
 };
 
-export const manageProfile = async (data: { first_name?: string; last_name?: string; email?: string; profile_picture?: File }) => {
+export const downloadPDF = async (
+  filename: string
+): Promise<DownloadPDFResponse> => {
   try {
-    const form = new FormData();
-    if (data.first_name) form.append('first_name', data.first_name);
-    if (data.last_name) form.append('last_name', data.last_name);
-    if (data.email) form.append('email', data.email);
-    if (data.profile_picture) form.append('profile_picture', data.profile_picture);
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/profile/`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}`, 'ngrok-skip-browser-warning': 'true' },
-      body: form,
-    });
-    return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
-  }
-};
-
-export const generateStatistics = async (params?: { file_id?: string }) => {
-  try {
-    const query = params?.file_id ? `?file_id=${encodeURIComponent(params.file_id)}` : '';
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/generate-statistics/${query}`, {
-      method: 'GET',
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/download-pdf/${filename}/`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
       },
     });
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      return { success: true, file_url: url };
+    }
     return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
+  } catch (error) {
+    console.error("Download PDF Error:", error);
+    return { success: false, message: "Network error" };
   }
 };
 
-export const downloadPDF = async (filename: string) => {
-  try {
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/download-pdf/${encodeURIComponent(filename)}/`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    });
-    if (!response.ok) return { success: false, message: 'Download failed' };
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    return { success: true, file_url: url };
-  } catch (e) {
-    return { success: false, message: 'Network error' };
-  }
-};
-export interface ClassStudent {
-  id: number;
-  name: string;
-  usn: string;
-}
-
-export const getStudentsForClass = async (
+export async function getStudentsForClass(
   branch_id: number,
   semester_id: number,
   section_id: number,
   subject_id: number
-): Promise<ClassStudent[]> => {
+): Promise<ClassStudent[]> {
   const params = new URLSearchParams({
-    branch_id: String(branch_id),
-    semester_id: String(semester_id),
-    section_id: String(section_id),
-    subject_id: String(subject_id),
+    branch_id: branch_id.toString(),
+    semester_id: semester_id.toString(),
+    section_id: section_id.toString(),
+    subject_id: subject_id.toString(),
   });
   const res = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/students/?${params.toString()}`, {
     method: "GET",
@@ -300,51 +674,11 @@ export const getStudentsForClass = async (
       Authorization: `Bearer ${localStorage.getItem("access_token")}`,
       "Content-Type": "application/json",
     },
+    credentials: 'include',
   });
   const data = await res.json();
   if (!data.success) throw new Error(data.message || 'Failed to fetch students');
-  return data.data as ClassStudent[];
-};
-
-export const takeAttendance = async (data: {
-  branch_id: string;
-  subject_id: string;
-  section_id: string;
-  semester_id: string;
-  method: "manual" | "ai";
-  attendance?: Array<{ student_id: string; status: boolean }>;
-}): Promise<{ success: boolean; message?: string }> => {
-  try {
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/take-attendance/`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-      },
-      body: (() => {
-        const formData = new FormData();
-        formData.append("branch_id", data.branch_id);
-        formData.append("subject_id", data.subject_id);
-        formData.append("section_id", data.section_id);
-        formData.append("semester_id", data.semester_id);
-        formData.append("method", data.method);
-        if (data.method === 'manual' && data.attendance) {
-          formData.append('attendance', JSON.stringify(data.attendance));
-        }
-        return formData;
-      })(),
-    });
-    return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
-  }
-};
-
-export interface InternalMarkStudent {
-  id: number;
-  name: string;
-  usn: string;
-  mark: number | '';
-  max_mark: number;
+  return data.data;
 }
 
 export const getInternalMarksForClass = async (
@@ -355,11 +689,11 @@ export const getInternalMarksForClass = async (
   test_number: number
 ): Promise<InternalMarkStudent[]> => {
   const params = new URLSearchParams({
-    branch_id: String(branch_id),
-    semester_id: String(semester_id),
-    section_id: String(section_id),
-    subject_id: String(subject_id),
-    test_number: String(test_number),
+    branch_id: branch_id.toString(),
+    semester_id: semester_id.toString(),
+    section_id: section_id.toString(),
+    subject_id: subject_id.toString(),
+    test_number: test_number.toString(),
   });
   const res = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/internal-marks/?${params.toString()}`, {
     method: "GET",
@@ -367,102 +701,108 @@ export const getInternalMarksForClass = async (
       Authorization: `Bearer ${localStorage.getItem("access_token")}`,
       "Content-Type": "application/json",
     },
+    credentials: 'include',
   });
   const data = await res.json();
   if (!data.success) throw new Error(data.message || 'Failed to fetch internal marks');
-  return data.data as InternalMarkStudent[];
+  return data.data;
 };
 
-export const uploadInternalMarks = async (payload: {
-  branch_id: string;
-  semester_id: string;
-  section_id: string;
-  subject_id: string;
-  test_number: number;
-  marks?: Array<{ student_id: string; mark: number }>;
-  file?: File;
-}): Promise<{ success: boolean; message?: string }> => {
-  try {
-    const form = new FormData();
-    form.append('branch_id', payload.branch_id);
-    form.append('semester_id', payload.semester_id);
-    form.append('section_id', payload.section_id);
-    form.append('subject_id', payload.subject_id);
-    form.append('test_number', String(payload.test_number));
-    if (payload.marks) form.append('marks', JSON.stringify(payload.marks));
-    if (payload.file) form.append('file', payload.file);
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/upload-marks/`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
-      body: form,
-    });
-    return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
-  }
+export const getFacultyLeaveRequests = async (): Promise<FacultyLeaveRequest[]> => {
+  const res = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/leave-requests/`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      "Content-Type": "application/json",
+    },
+    credentials: 'include',
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || 'Failed to fetch leave requests');
+  return data.data;
 };
 
-export const viewAttendanceRecords = async (params: { branch_id: string; semester_id: string; section_id: string; subject_id: string }) => {
+export const getFacultyProfile = async () => {
   try {
-    const query = new URLSearchParams(params).toString();
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/attendance-records/?${query}`, {
-      method: 'GET',
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/profile/`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
       },
     });
     return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
+  } catch (error) {
+    console.error("Get Faculty Profile Error:", error);
+    return { success: false, message: "Network error" };
   }
 };
 
-export const getFacultyNotifications = async () => {
-  try {
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/notifications/`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
-  }
-};
+export async function getFacultyNotifications() {
+  const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/notifications/`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      "Content-Type": "application/json",
+    },
+  });
+  return await response.json();
+}
 
-export const getFacultySentNotifications = async () => {
-  try {
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/sent-notifications/`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
-  }
-};
+export async function getFacultySentNotifications() {
+  const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/notifications/sent/`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      "Content-Type": "application/json",
+    },
+  });
+  return await response.json();
+}
 
-export const createAnnouncement = async (data: { branch_id: string; semester_id: string; section_id: string; title: string; content: string; target?: 'student' | 'faculty' | 'both'; student_usns?: string[] }) => {
-  try {
-    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/announcements/`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    return await response.json();
-  } catch (e) {
-    return { success: false, message: 'Network error' };
-  }
-};
+export async function getAttendanceRecordsList() {
+  const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/attendance-records/list/`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      "Content-Type": "application/json",
+    },
+  });
+  return await response.json();
+}
+
+export async function getAttendanceRecordDetails(recordId: number) {
+  const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/attendance-records/${recordId}/details/`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      "Content-Type": "application/json",
+    },
+  });
+  return await response.json();
+}
+
+export async function manageStudentLeave({ leave_id, action }: { leave_id: string; action: 'APPROVE' | 'REJECT' }) {
+  const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/manage-student-leave/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ leave_id, action }),
+  });
+  return await response.json();
+}
+
+export interface LeaveRow {
+  id: string;
+  student_name: string;
+  usn: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+}
 
 
 

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { applyLeave, getFacultyAssignments, getFacultyLeaveRequests } from '@/utils/faculty_api';
+import { applyLeave, getFacultyAssignments, getFacultyLeaveRequests, getApplyLeaveBootstrap } from '@/utils/faculty_api';
 
 const ApplyLeavePage: React.FC = () => {
   const { toast } = useToast();
@@ -25,16 +25,25 @@ const ApplyLeavePage: React.FC = () => {
 
   useEffect(() => {
     (async () => {
-      const [assignmentsRes, leaves] = await Promise.all([
-        getFacultyAssignments(),
-        getFacultyLeaveRequests().catch(() => []),
-      ]);
-      if (assignmentsRes?.success && assignmentsRes?.data) {
-        const b = Array.from(new Map(assignmentsRes.data.map((a: any) => [a.branch_id, { id: a.branch_id, name: a.branch }])).values());
-        setBranches(b);
-        if (b.length > 0) setSelectedBranch(String(b[0].id));
+      const bootstrapRes = await getApplyLeaveBootstrap();
+      if (bootstrapRes?.success && bootstrapRes?.data) {
+        const { assignments, leave_requests, branches } = bootstrapRes.data;
+        setBranches(branches);
+        if (branches.length > 0) setSelectedBranch(String(branches[0].id));
+        setHistory(leave_requests || []);
+      } else {
+        // Fallback to old method if bootstrap fails
+        const [assignmentsRes, leaves] = await Promise.all([
+          getFacultyAssignments(),
+          getFacultyLeaveRequests().catch(() => []),
+        ]);
+        if (assignmentsRes?.success && assignmentsRes?.data) {
+          const b = Array.from(new Map(assignmentsRes.data.map((a: any) => [a.branch_id, { id: a.branch_id, name: a.branch }])).values());
+          setBranches(b);
+          if (b.length > 0) setSelectedBranch(String(b[0].id));
+        }
+        setHistory(leaves || []);
       }
-      setHistory(leaves || []);
     })();
   }, []);
 

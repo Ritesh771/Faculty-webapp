@@ -200,6 +200,7 @@ const Sidebar = React.forwardRef<
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+                paddingTop: 'var(--safe-top)',
               } as React.CSSProperties
             }
             side={side}
@@ -229,6 +230,10 @@ const Sidebar = React.forwardRef<
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
           )}
+          style={{
+            height: 'calc(100svh - var(--safe-top))',
+            marginTop: 'var(--safe-top)'
+          }}
         />
         <div
           className={cn(
@@ -242,6 +247,10 @@ const Sidebar = React.forwardRef<
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
             className
           )}
+          style={{
+            paddingTop: 'var(--safe-top)',
+            height: 'calc(100svh - var(--safe-top))'
+          }}
           {...props}
         >
           <div
