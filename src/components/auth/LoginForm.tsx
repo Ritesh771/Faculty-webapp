@@ -126,14 +126,7 @@ export const LoginForm: React.FC = () => {
             </motion.div>
           </div>
           <div className="space-y-3">
-            <motion.h1 
-              className="text-3xl sm:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
-              AMC College
-            </motion.h1>
+            
             <motion.h2 
               className="text-xl sm:text-2xl font-semibold text-primary"
               initial={{ opacity: 0 }}

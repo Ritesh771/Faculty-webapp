@@ -161,19 +161,11 @@ const ProfilePage: React.FC = () => {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
-                    Personal Information
+                    About Me
                   </CardTitle>
-                  <CardDescription>
-                    Update your personal details and contact information
-                  </CardDescription>
+                  
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  {isEditing ? 'Cancel' : 'Edit'}
-                </Button>
+                
               </div>
             </CardHeader>
             <CardContent>

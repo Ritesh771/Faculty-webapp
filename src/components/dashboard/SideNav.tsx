@@ -4,7 +4,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
-import { Logo } from '@/components/ui/logo';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, Users, GraduationCap, BookOpen, Settings, 
@@ -40,12 +39,12 @@ const navigationItems: NavItem[] = [
   { label: 'Upload Marks', href: '/dashboard/upload-marks', icon: Upload, roles: ['faculty'] },
   { label: 'Apply Leave', href: '/dashboard/apply-leave', icon: FileInput, roles: ['faculty'] },
   { label: 'Attendance Records', href: '/dashboard/attendance-records', icon: BarChart3, roles: ['faculty'] },
+  { label: 'Generate Statistics', href: '/dashboard/generate-statistics', icon: TrendingUp, roles: ['faculty'] },
   { label: 'Announcements', href: '/dashboard/announcements', icon: Megaphone, roles: ['faculty'] },
   { label: 'Proctor Students', href: '/dashboard/proctor-students', icon: Users, roles: ['faculty'] },
   { label: 'Manage Student Leave', href: '/dashboard/manage-student-leave', icon: FileCheck, roles: ['faculty'] },
   { label: 'Timetable', href: '/dashboard/timetable', icon: Calendar, roles: ['faculty'] },
   { label: 'Profile', href: '/dashboard/profile', icon: UserCircle, roles: ['faculty'] },
-  { label: 'Generate Statistics', href: '/dashboard/generate-statistics', icon: TrendingUp, roles: ['faculty'] },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings, roles: ['faculty'] },
 ];
 
@@ -69,10 +68,12 @@ export const SideNav: React.FC = () => {
   };
 
   return (
-    <Sidebar className="border-r bg-white">
-      <SidebarHeader className="p-4 bg-white border-b">
-        <div className="flex items-center gap-3">
-          <Logo size="sm" className="h-8 w-8" />
+    <Sidebar className="border-r bg-white/80 backdrop-blur-sm">
+      <SidebarHeader className="p-4 bg-white/60 backdrop-blur-sm border-b">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center h-8 w-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full">
+            <GraduationCap className="h-5 w-5 text-white" />
+          </div>
           <div className="flex flex-col">
             <span className="font-semibold text-sm text-gray-900">NeuroCampus</span>
             <span className="text-xs text-gray-600">AMC College</span>
@@ -80,7 +81,7 @@ export const SideNav: React.FC = () => {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 bg-white">
+      <SidebarContent className="px-2 bg-white/60 backdrop-blur-sm">
         <SidebarMenu>
           {userNavItems.map((item, index) => {
             const isActive = location.pathname === item.href;
@@ -115,7 +116,7 @@ export const SideNav: React.FC = () => {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 bg-white border-t">
+      <SidebarFooter className="p-4 bg-white/60 backdrop-blur-sm border-t">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
             <UserCircle className="h-6 w-6 text-gray-600" />

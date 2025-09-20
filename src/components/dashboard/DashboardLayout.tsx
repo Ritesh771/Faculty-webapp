@@ -37,7 +37,7 @@ export const DashboardLayout: React.FC = () => {
   console.log('DashboardLayout - user found, rendering dashboard');
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-50 overflow-hidden">
+      <div className="min-h-screen flex w-full bg-transparent overflow-hidden">
         <SideNav />
         <SidebarInset className="flex-1 flex flex-col min-w-0">
           <AppHeader />

@@ -142,7 +142,8 @@
   }
   
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: transparent;
     /* Removed padding-top to avoid conflict with fixed header - header handles safe area now */
     padding-bottom: var(--safe-bottom);
     padding-left: var(--safe-left);

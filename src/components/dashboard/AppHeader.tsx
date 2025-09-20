@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { User } from 'lucide-react';
 
 export const AppHeader: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -27,9 +30,13 @@ export const AppHeader: React.FC = () => {
     });
   };
 
+  const handleProfileClick = () => {
+    navigate('/dashboard/profile');
+  };
+
   return (
     <header 
-      className="fixed top-0 left-0 right-0 z-50 bg-white border-b shadow-sm"
+      className="fixed top-0 left-0 right-0 z-50 bg-transparent border-b shadow-sm backdrop-blur-sm"
       style={{ 
         paddingTop: 'var(--safe-top)',
         height: 'calc(4rem + var(--safe-top))' // Base height + safe area
@@ -61,12 +68,15 @@ export const AppHeader: React.FC = () => {
             </div>
           )}
 
-          {/* Notifications Bell */}
-          <Button variant="ghost" size="icon" className={`${isMobile ? 'h-7 w-7' : 'h-8 w-8 sm:h-9 sm:w-9'} hover:bg-gray-100`}>
-            <svg xmlns="http://www.w3.org/2000/svg" className={`${isMobile ? 'h-4 w-4' : 'h-4 w-4 sm:h-5 sm:w-5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <span className="sr-only">Notifications</span>
+          {/* Profile Icon */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={`${isMobile ? 'h-7 w-7' : 'h-8 w-8 sm:h-9 sm:w-9'} hover:bg-gray-100`}
+            onClick={handleProfileClick}
+          >
+            <User className={`${isMobile ? 'h-4 w-4' : 'h-4 w-4 sm:h-5 sm:w-5'}`} />
+            <span className="sr-only">Profile</span>
           </Button>
 
           {/* User info - hidden on small screens */}

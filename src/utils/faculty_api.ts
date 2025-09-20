@@ -577,22 +577,26 @@ export const manageProfile = async (
   data: ManageProfileRequest
 ): Promise<ManageProfileResponse> => {
   try {
-    const formData = new FormData();
-    if (data.first_name) formData.append("first_name", data.first_name);
-    if (data.last_name) formData.append("last_name", data.last_name);
-    if (data.email) formData.append("email", data.email);
-    if (data.profile_picture) formData.append("profile_picture", data.profile_picture);
+    // Use JSON for profile updates instead of FormData since we're not uploading files
     const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/profile/`, {
-      method: "POST",
+      method: "PUT",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
       },
-      body: formData,
+      body: JSON.stringify({
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email
+      }),
     });
-    return await response.json();
+    
+    const result = await response.json();
+    console.log('Profile update API response:', result);
+    return result;
   } catch (error) {
     console.error("Manage Profile Error:", error);
-    return { success: false, message: "Network error" };
+    return { success: false, message: "Network error occurred while updating profile" };
   }
 };
 
@@ -652,6 +656,57 @@ export const downloadPDF = async (
     return await response.json();
   } catch (error) {
     console.error("Download PDF Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+interface AttendanceTrendResponse {
+  success: boolean;
+  message?: string;
+  data?: Array<{
+    month: string;
+    attendance: number;
+  }>;
+}
+
+interface GradeDistributionResponse {
+  success: boolean;
+  message?: string;
+  data?: Array<{
+    grade: string;
+    count: number;
+    color?: string;
+  }>;
+}
+
+export const getAttendanceTrend = async (): Promise<AttendanceTrendResponse> => {
+  try {
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/attendance-trend/`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Get Attendance Trend Error:", error);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const getGradeDistribution = async (): Promise<GradeDistributionResponse> => {
+  try {
+    const response = await fetchWithTokenRefresh(`${getApiBaseUrl()}/faculty/grade-distribution/`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Get Grade Distribution Error:", error);
     return { success: false, message: "Network error" };
   }
 };
