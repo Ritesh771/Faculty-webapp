@@ -5,14 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Logo } from '@/components/ui/logo';
 import { toast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import { setApiBaseUrl } from '@/utils/config';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const LoginForm: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(localStorage.getItem('saved_username') || '');
+  const [password, setPassword] = useState(localStorage.getItem('saved_password') || '');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(localStorage.getItem('remember_me') === 'true');
   const [loading, setLoading] = useState(false);
   const [apiUrl, setApiUrl] = useState(localStorage.getItem('API_BASE_URL') || 'http://127.0.0.1:8000/api');
   const { login } = useAuth();
@@ -26,6 +30,18 @@ export const LoginForm: React.FC = () => {
       if (apiUrl && apiUrl.trim()) {
         setApiBaseUrl(apiUrl);
       }
+      
+      // Save or clear credentials based on remember me setting
+      if (rememberMe) {
+        localStorage.setItem('saved_username', username);
+        localStorage.setItem('saved_password', password);
+        localStorage.setItem('remember_me', 'true');
+      } else {
+        localStorage.removeItem('saved_username');
+        localStorage.removeItem('saved_password');
+        localStorage.setItem('remember_me', 'false');
+      }
+      
       const res: any = await login(username, password);
       if (res?.success === false) {
         toast({
@@ -191,15 +207,30 @@ export const LoginForm: React.FC = () => {
                   <Label htmlFor="password" className="text-sm font-semibold text-foreground">
                     Password
                   </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="h-12 text-sm sm:text-base border-2 border-border/50 focus:border-primary transition-all duration-300 bg-background/50 backdrop-blur-sm"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="h-12 text-sm sm:text-base border-2 border-border/50 focus:border-primary transition-all duration-300 bg-background/50 backdrop-blur-sm pr-12"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </motion.div>
                 <motion.div 
                   className="space-y-2"

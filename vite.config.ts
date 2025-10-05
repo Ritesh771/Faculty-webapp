@@ -25,9 +25,8 @@ export default defineConfig(({ mode }) => ({
         scope: '/',
         start_url: '/',
         icons: [
-          { src: '/icon.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icon-192.webp', sizes: '192x192', type: 'image/webp' },
+          { src: '/icon-512.webp', sizes: '512x512', type: 'image/webp' },
           { src: '/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
         ]
       },
