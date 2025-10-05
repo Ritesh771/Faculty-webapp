@@ -101,7 +101,7 @@ const AnnouncementsPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Filters
+              Search
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -115,18 +115,7 @@ const AnnouncementsPage: React.FC = () => {
                   className="pl-10"
                 />
               </div>
-              <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="academic">Academic</SelectItem>
-                  <SelectItem value="general">General</SelectItem>
-                  <SelectItem value="training">Training</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                </SelectContent>
-              </Select>
+              
             </div>
           </CardContent>
         </Card>

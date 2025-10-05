@@ -26,6 +26,15 @@ const ProctorStudentsPage: React.FC = () => {
   const [students, setStudents] = useState<ProctorStudentView[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Sort students by USN (last 3 digits numerically)
+  const sortStudentsByUSN = (studentList: ProctorStudentView[]) => {
+    return [...studentList].sort((a, b) => {
+      const aLastThree = a.usn.slice(-3);
+      const bLastThree = b.usn.slice(-3);
+      return parseInt(aLastThree, 10) - parseInt(bLastThree, 10);
+    });
+  };
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -50,7 +59,8 @@ const ProctorStudentsPage: React.FC = () => {
             avgMarks,
           };
         });
-        setStudents(mapped);
+        const sortedStudents = sortStudentsByUSN(mapped);
+        setStudents(sortedStudents);
       } else {
         toast({ title: 'Failed to load students', description: res.message || 'Try again later', variant: 'destructive' });
       }
@@ -63,7 +73,7 @@ const ProctorStudentsPage: React.FC = () => {
     const matchesSearch = 
       student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.usn.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === '' || student.status === statusFilter;
+    const matchesStatus = statusFilter === '' || statusFilter === 'all' || student.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 

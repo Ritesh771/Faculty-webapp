@@ -217,8 +217,8 @@ const GenerateStatisticsPage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-80 overflow-x-auto">
+              <ResponsiveContainer width="100%" height="100%" minWidth={600}>
                 <BarChart data={filteredData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
@@ -266,8 +266,8 @@ const GenerateStatisticsPage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="h-64 overflow-x-auto">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={400}>
                     <LineChart data={attendanceTrendData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
