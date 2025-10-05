@@ -169,7 +169,7 @@ export const FacultyDashboard: React.FC = () => {
         className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4"
         variants={itemVariants}
       >
-        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer" onClick={() => navigate('/dashboard/timetable')}>
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-emerald-600/10"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
             <CardTitle className="text-xs sm:text-sm font-medium text-emerald-900">Today's Classes</CardTitle>
@@ -185,25 +185,11 @@ export const FacultyDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-blue-600/10"></div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-xs sm:text-sm font-medium text-blue-900">Total Students</CardTitle>
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-lg sm:text-2xl font-bold text-blue-900">{normalizedOverview.total_students}</div>
-            <p className="text-xs text-blue-600 mt-1">Across all courses</p>
-          </CardContent>
-        </Card>
+        
 
        
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer" onClick={() => navigate('/dashboard/announcements')}>
           <div className="absolute inset-0 bg-gradient-to-br from-purple-400/10 to-purple-600/10"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
             <CardTitle className="text-xs sm:text-sm font-medium text-purple-900">Announcements</CardTitle>
@@ -222,21 +208,21 @@ export const FacultyDashboard: React.FC = () => {
 
       {/* Ongoing Class Card */}
       <motion.div variants={itemVariants}>
-        <Card className="relative overflow-hidden bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg transition-all duration-300">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-400/10 to-red-600/10"></div>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-blue-600/10"></div>
           <CardHeader className="relative z-10">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base sm:text-lg text-red-900 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                <CardTitle className="text-base sm:text-lg text-blue-900 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                   Ongoing Class
                 </CardTitle>
-                <CardDescription className="text-red-700">
+                <CardDescription className="text-blue-700">
                   Currently in session
                 </CardDescription>
               </div>
               <div className="text-right">
-                <div className="text-2xl sm:text-3xl font-bold text-red-900" id="live-time">
+                <div className="text-2xl sm:text-3xl font-bold text-blue-900" id="live-time">
                   {currentTime.toLocaleTimeString('en-US', { 
                     hour: '2-digit', 
                     minute: '2-digit', 
@@ -244,7 +230,7 @@ export const FacultyDashboard: React.FC = () => {
                     hour12: true 
                   })}
                 </div>
-                <div className="text-xs text-red-600">Live Time</div>
+                <div className="text-xs text-blue-600">Live Time</div>
               </div>
             </div>
           </CardHeader>
@@ -274,15 +260,15 @@ export const FacultyDashboard: React.FC = () => {
                   return (
                     <motion.div 
                       key={index}
-                      className="bg-white/50 rounded-lg p-4 border border-red-200"
+                      className="bg-white/50 rounded-lg p-4 border border-blue-200"
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3 }}
                     >
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-lg text-red-900">{classInfo.subject}</h4>
-                          <div className="flex flex-wrap items-center mt-2 text-sm text-red-700 gap-4">
+                          <h4 className="font-semibold text-lg text-blue-900">{classInfo.subject}</h4>
+                          <div className="flex flex-wrap items-center mt-2 text-sm text-blue-700 gap-4">
                             <div className="flex items-center">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -305,8 +291,8 @@ export const FacultyDashboard: React.FC = () => {
                         </div>
                         <div className="flex flex-col sm:flex-row items-center gap-2">
                           <div className="text-center">
-                            <div className="text-sm font-medium text-red-900">Duration</div>
-                            <div className="text-xs text-red-600">
+                            <div className="text-sm font-medium text-blue-900">Duration</div>
+                            <div className="text-xs text-blue-600">
                               {startTime && endTime ? 
                                 `${Math.floor((endTime - currentTimeMinutes) / 60)}h ${(endTime - currentTimeMinutes) % 60}m left` : 
                                 'Time unknown'
@@ -315,7 +301,7 @@ export const FacultyDashboard: React.FC = () => {
                           </div>
                           <Button 
                             size="sm" 
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
                             onClick={() => {
                               const params = new URLSearchParams({ subject: classInfo.subject });
                               if (classInfo.section) params.append('section', classInfo.section);
@@ -343,7 +329,7 @@ export const FacultyDashboard: React.FC = () => {
                   const endTime = parseTime(classInfo.end_time);
                   return !(startTime && endTime && currentTimeMinutes >= startTime && currentTimeMinutes <= endTime);
                 }) && (
-                  <div className="text-center py-8 text-red-600">
+                  <div className="text-center py-8 text-blue-600">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -353,7 +339,7 @@ export const FacultyDashboard: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="text-center py-8 text-red-600">
+              <div className="text-center py-8 text-blue-600">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -365,63 +351,7 @@ export const FacultyDashboard: React.FC = () => {
         </Card>
       </motion.div>
 
-      {/* Quick Actions */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
-            <CardDescription>Common tasks for today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button 
-                  className="w-full h-auto flex flex-col items-center p-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
-                  onClick={() => navigate('/dashboard/take-attendance')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Take Attendance
-                </Button>
-              </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button 
-                  variant="outline"
-                  className="w-full h-auto flex flex-col items-center p-4 border-2 hover:bg-blue-50 hover:border-blue-300"
-                  onClick={() => navigate('/dashboard/upload-marks')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  Upload Marks
-                </Button>
-              </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button 
-                  variant="outline"
-                  className="w-full h-auto flex flex-col items-center p-4 border-2 hover:bg-orange-50 hover:border-orange-300"
-                  onClick={() => navigate('/dashboard/apply-leave')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Apply Leave
-                </Button>
-              </motion.div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+
 
       {/* Today's Schedule */}
       <motion.div variants={itemVariants}>
@@ -480,37 +410,69 @@ export const FacultyDashboard: React.FC = () => {
         </Card>
       </motion.div>
 
-
-      {/* Attendance Trend */}
+      {/* Quick Actions */}
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Attendance Trend</CardTitle>
-            <CardDescription>Monthly attendance percentage trend</CardDescription>
+            <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
+            <CardDescription>Common tasks for today</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={[
-                  { month: 'Jan', attendance: 85 },
-                  { month: 'Feb', attendance: 88 },
-                  { month: 'Mar', attendance: 92 },
-                  { month: 'Apr', attendance: 87 },
-                  { month: 'May', attendance: 90 },
-                  { month: 'Jun', attendance: 89 },
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis domain={[80, 95]} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="attendance" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button 
+                  variant="outline"
+                  className="w-full h-auto flex flex-col items-center p-4 border-2 hover:bg-green-50 hover:border-green-300"
+                  onClick={() => navigate('/dashboard/take-attendance')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Take Attendance
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button 
+                  variant="outline"
+                  className="w-full h-auto flex flex-col items-center p-4 border-2 hover:bg-blue-50 hover:border-blue-300"
+                  onClick={() => navigate('/dashboard/upload-marks')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Upload Marks
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button 
+                  variant="outline"
+                  className="w-full h-auto flex flex-col items-center p-4 border-2 hover:bg-orange-50 hover:border-orange-300"
+                  onClick={() => navigate('/dashboard/apply-leave')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Apply Leave
+                </Button>
+              </motion.div>
             </div>
           </CardContent>
         </Card>
       </motion.div>
+
+      
+
+
+      
 
       
     </motion.div>

@@ -17,6 +17,15 @@ const AttendanceRecordsPage: React.FC = () => {
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Sort students by USN (last 3 digits numerically)
+  const sortStudentsByUSN = (studentList: any[]) => {
+    return [...studentList].sort((a, b) => {
+      const aLastThree = a.usn.slice(-3);
+      const bLastThree = b.usn.slice(-3);
+      return parseInt(aLastThree, 10) - parseInt(bLastThree, 10);
+    });
+  };
+
   useEffect(() => {
     (async () => {
       const res = await getFacultyAssignments();
@@ -37,8 +46,9 @@ const AttendanceRecordsPage: React.FC = () => {
       const res = await viewAttendanceRecords(params);
       setLoading(false);
       if (res?.success) {
-        // Expecting an array of subject-level or session-level records
-        setRecords(res.data || []);
+        // Sort students by USN and store individual student records
+        const sortedRecords = sortStudentsByUSN(res.data || []);
+        setRecords(sortedRecords);
       } else {
         setRecords([]);
       }
@@ -46,40 +56,21 @@ const AttendanceRecordsPage: React.FC = () => {
   }, [selected]);
 
   const filteredData = records
-    .map((r) => {
-      const subject = r.subject ?? r.subject_name ?? r.name ?? r.student ?? '';
-      const semester = r.semester ?? r.semester_id ?? r.sem ?? null;
-      const totalSessions = r.total_sessions ?? r.total ?? r.totalClasses ?? 0;
-      const present = r.present ?? r.attended ?? r.attendance ?? 0;
-      const percentageRaw = r.percentage ?? r.percent ?? (totalSessions ? Math.round((present / totalSessions) * 100) : 0);
-      return {
-        ...r,
-        subject,
-        semester,
-        total_sessions: totalSessions,
-        present,
-        percentage: percentageRaw,
-      };
-    })
     .filter(record => {
-      const matchesSearch = (record.subject || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesSemester =
-        selectedSemester === '' ||
-        selectedSemester === 'all' ||
-        record.semester == null ||
-        String(record.semester) === selectedSemester;
-      return matchesSearch && matchesSemester;
+      const matchesSearch = (record.student || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (record.usn || '').toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
     });
 
   const getPercentageColor = (percentage: number) => {
-    if (percentage >= 90) return 'text-green-600';
-    if (percentage >= 75) return 'text-yellow-600';
+    if (percentage >= 85) return 'text-green-600';
+    if (percentage >= 70) return 'text-yellow-600';
     return 'text-red-600';
   };
 
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-green-500';
-    if (percentage >= 75) return 'bg-yellow-500';
+    if (percentage >= 85) return 'bg-green-500';
+    if (percentage >= 70) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
@@ -96,7 +87,7 @@ const AttendanceRecordsPage: React.FC = () => {
               Attendance Records
             </h1>
             <p className="text-sm sm:text-base text-gray-600 mt-1">
-              View detailed attendance records for all subjects
+              View detailed attendance records for individual students
             </p>
           </div>
           <Badge variant="outline" className="flex items-center gap-2 w-fit">
@@ -202,7 +193,7 @@ const AttendanceRecordsPage: React.FC = () => {
               Subject-wise Attendance
             </CardTitle>
             <CardDescription>
-              Detailed attendance breakdown for each subject
+              Detailed attendance breakdown for each student
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -212,7 +203,7 @@ const AttendanceRecordsPage: React.FC = () => {
               )}
               {filteredData.map((record, index) => (
                 <motion.div
-                  key={`${record.subject}-${index}`}
+                  key={`${record.usn}-${index}`}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -221,8 +212,10 @@ const AttendanceRecordsPage: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                        <h4 className="font-medium text-gray-900">{record.subject}</h4>
-                        
+                        <h4 className="font-medium text-gray-900">{record.student}</h4>
+                        <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                          {record.usn}
+                        </span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-3">
                         <div>
@@ -241,12 +234,7 @@ const AttendanceRecordsPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="w-full sm:w-32">
-                      <Progress 
-                        value={record.percentage} 
-                        className="h-2"
-                      />
-                    </div>
+                    
                   </div>
                 </motion.div>
               ))}
@@ -255,7 +243,7 @@ const AttendanceRecordsPage: React.FC = () => {
             {filteredData.length === 0 && (
               <div className="text-center py-8">
                 <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500">No attendance records found</p>
+                <p className="text-gray-500">No student attendance records found</p>
               </div>
             )}
           </CardContent>

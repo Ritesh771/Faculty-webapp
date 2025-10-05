@@ -22,6 +22,10 @@ const TakeAttendancePage: React.FC = () => {
   const [students, setStudents] = useState<Array<ClassStudent & { status: 'present' | 'absent' | 'late' }>>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingStudents, setFetchingStudents] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Get today's date for date input min attribute
+  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     (async () => {
@@ -59,15 +63,23 @@ const TakeAttendancePage: React.FC = () => {
         setClassMeta(meta);
         const list = await getStudentsForClass(match.branch_id, match.semester_id, match.section_id, match.subject_id);
         const withStatus = list.map(s => ({ ...s, status: 'present' as const }));
-        setStudents(withStatus);
-        setAttendance(withStatus.reduce((acc, s) => ({ ...acc, [s.id]: 'present' }), {}));
+        const sortedWithStatus = sortStudentsByUSN(withStatus);
+        setStudents(sortedWithStatus);
+        setAttendance(sortedWithStatus.reduce((acc, s) => ({ ...acc, [s.id]: 'present' }), {}));
       })();
     }
   }, [assignments, preselect]);
 
   const [attendance, setAttendance] = useState<Record<number, 'present' | 'absent' | 'late'>>({});
 
-  // Get unique subjects from assignments
+  // Sort students by USN (last 3 digits numerically)
+  const sortStudentsByUSN = (studentList: any[]) => {
+    return [...studentList].sort((a, b) => {
+      const aLastThree = a.usn.slice(-3);
+      const bLastThree = b.usn.slice(-3);
+      return parseInt(aLastThree, 10) - parseInt(bLastThree, 10);
+    });
+  };
   const availableSubjects = useMemo(() => {
     const subjects = Array.from(new Map(assignments.map(a => [a.subject_name, a])).values());
     return subjects;
@@ -110,6 +122,8 @@ const TakeAttendancePage: React.FC = () => {
     setLoading(false);
     if (res.success) {
       toast({ title: "Attendance Submitted", description: `Attendance for ${selectedSubject} on ${selectedDate} has been recorded.` });
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 1800);
     } else {
       toast({ title: "Error", description: res.message || 'Failed to submit attendance', variant: 'destructive' });
     }
@@ -139,6 +153,40 @@ const TakeAttendancePage: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 lg:p-6 max-w-full overflow-hidden">
+      {/* Success Animation Overlay */}
+      {showSuccess && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+        >
+          <div className="absolute inset-0 bg-black/30" />
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            className="relative z-10 w-full max-w-sm sm:max-w-md"
+          >
+            <Card className="shadow-xl">
+              <CardContent className="p-6 sm:p-8 flex flex-col items-center text-center">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: [0, 1.2, 1] }}
+                  transition={{ duration: 0.4 }}
+                  className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-4"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 sm:h-10 sm:w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </motion.div>
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Attendance Submitted</h3>
+                <p className="mt-1 text-sm text-gray-600">Your attendance has been recorded successfully.</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -178,6 +226,7 @@ const TakeAttendancePage: React.FC = () => {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
+                  min={today}
                   className="w-full p-2 border rounded-md"
                 />
               </div>
@@ -233,8 +282,9 @@ const TakeAttendancePage: React.FC = () => {
                         const list = await getStudentsForClass(assignment.branch_id, assignment.semester_id, assignment.section_id, assignment.subject_id);
                         console.log('Fetched students:', list.length);
                         const withStatus = list.map(s => ({ ...s, status: 'present' as const }));
-                        setStudents(withStatus);
-                        setAttendance(withStatus.reduce((acc, s) => ({ ...acc, [s.id]: 'present' }), {}));
+                        const sortedWithStatus = sortStudentsByUSN(withStatus);
+                        setStudents(sortedWithStatus);
+                        setAttendance(sortedWithStatus.reduce((acc, s) => ({ ...acc, [s.id]: 'present' }), {}));
                       } catch (error) {
                         console.error('Error fetching students:', error);
                         toast({
@@ -402,9 +452,7 @@ const TakeAttendancePage: React.FC = () => {
                 >
                   {loading ? 'Submitting...' : 'Submit Attendance'}
                 </Button>
-                <Button variant="outline" className="flex-1 sm:flex-none">
-                  Save as Draft
-                </Button>
+                
               </div>
             </CardContent>
           </Card>

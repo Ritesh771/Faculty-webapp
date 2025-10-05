@@ -688,10 +688,24 @@ export const getAttendanceTrend = async (): Promise<AttendanceTrendResponse> => 
         "Content-Type": "application/json",
       },
     });
-    return await response.json();
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn("Attendance trend endpoint not found, using fallback data");
+        return { 
+          success: false, 
+          message: "Endpoint not available",
+          data: []
+        };
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error("Get Attendance Trend Error:", error);
-    return { success: false, message: "Network error" };
+    return { success: false, message: "Network error", data: [] };
   }
 };
 
@@ -704,10 +718,24 @@ export const getGradeDistribution = async (): Promise<GradeDistributionResponse>
         "Content-Type": "application/json",
       },
     });
-    return await response.json();
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn("Grade distribution endpoint not found, using fallback data");
+        return { 
+          success: false, 
+          message: "Endpoint not available",
+          data: []
+        };
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error("Get Grade Distribution Error:", error);
-    return { success: false, message: "Network error" };
+    return { success: false, message: "Network error", data: [] };
   }
 };
 

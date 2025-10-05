@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Download, Save, FileSpreadsheet } from 'lucide-react';
+import { Download, Save } from 'lucide-react';
 import { getFacultyAssignments, getStudentsForClass, uploadInternalMarks, InternalMarkStudent, getInternalMarksForClass } from '@/utils/faculty_api';
+import * as XLSX from 'xlsx';
 
 const UploadMarksPage: React.FC = () => {
   const { toast } = useToast();
@@ -21,8 +22,18 @@ const UploadMarksPage: React.FC = () => {
   
   const [students, setStudents] = useState<InternalMarkStudent[]>([]);
 
+  // Sort students by USN (last 3 digits numerically)
+  const sortStudentsByUSN = (studentList: InternalMarkStudent[]) => {
+    return [...studentList].sort((a, b) => {
+      const aLastThree = a.usn.slice(-3);
+      const bLastThree = b.usn.slice(-3);
+      return parseInt(aLastThree, 10) - parseInt(bLastThree, 10);
+    });
+  };
+
   const [marks, setMarks] = useState<Record<number, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const loadExistingMarks = async (meta: { branch_id: number; semester_id: number; section_id: number; subject_id: number }, testNumber: number) => {
     try {
@@ -69,6 +80,7 @@ const UploadMarksPage: React.FC = () => {
       });
       return;
     }
+    setLoading(true);
     const payload = {
       branch_id: String(classMeta.branch_id),
       semester_id: String(classMeta.semester_id),
@@ -80,6 +92,7 @@ const UploadMarksPage: React.FC = () => {
         .map(s => ({ student_id: String(s.id), mark: Number(marks[s.id]) })),
     };
     const res = await uploadInternalMarks(payload);
+    setLoading(false);
     if (res.success) {
       toast({ title: 'Success', description: 'Marks uploaded successfully!' });
       setShowSuccess(true);
@@ -89,20 +102,43 @@ const UploadMarksPage: React.FC = () => {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      toast({
-        title: "File Upload",
-        description: `Processing ${file.name}...`,
-      });
-    }
-  };
-
   const downloadTemplate = () => {
+    if (!students.length) {
+      toast({
+        title: "No Students",
+        description: "Please select a subject first to generate the template.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create Excel workbook
+    const wb = XLSX.utils.book_new();
+
+    // Create worksheet data with actual marks
+    const wsData = [
+      ['Student Name', 'USN', 'Marks'], // Headers
+      ...students.map(student => [student.name, student.usn, marks[student.id] || '']) // Student data with marks
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 20 }, // Student Name
+      { wch: 15 }, // USN
+      { wch: 10 }  // Marks
+    ];
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Marks Export');
+
+    // Generate and download Excel file
+    XLSX.writeFile(wb, `marks_${selectedSubject || 'subject'}_${selectedTestType || 'test'}_${new Date().toISOString().split('T')[0]}.xlsx`);
+
     toast({
-      title: "Download Started",
-      description: "CSV template is being downloaded.",
+      title: "Marks Exported",
+      description: "Excel file with marks has been downloaded.",
     });
   };
 
@@ -150,10 +186,10 @@ const UploadMarksPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-gray-900">
-              Upload Marks
+              Enter Marks
             </h1>
             <p className="text-sm sm:text-base text-gray-600 mt-1">
-              Enter or upload student marks for assessments
+              Enter student marks for assessments and export as Excel
             </p>
           </div>
         </div>
@@ -194,7 +230,8 @@ const UploadMarksPage: React.FC = () => {
                   if (a) {
                     setClassMeta({ branch_id: a.branch_id, semester_id: a.semester_id, section_id: a.section_id, subject_id: a.subject_id });
                     const list = await getStudentsForClass(a.branch_id, a.semester_id, a.section_id, a.subject_id);
-                    setStudents(list.map(s => ({ ...s, mark: '', max_mark: 100 })));
+                    const sortedList = sortStudentsByUSN(list.map(s => ({ ...s, mark: '', max_mark: 100 })));
+                    setStudents(sortedList);
                     setMarks(list.reduce((acc, s) => ({ ...acc, [s.id]: '' }), {}));
                     if (selectedTestType) {
                       await loadExistingMarks({ branch_id: a.branch_id, semester_id: a.semester_id, section_id: a.section_id, subject_id: a.subject_id }, Number(selectedTestType));
@@ -235,50 +272,6 @@ const UploadMarksPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* CSV Upload Option */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
-              CSV Upload
-            </CardTitle>
-            <CardDescription>
-              Upload marks using a CSV file or enter manually below
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="csv-upload"
-                />
-                <label htmlFor="csv-upload">
-                  <Button variant="outline" className="w-full sm:w-auto cursor-pointer" asChild>
-                    <span className="flex items-center gap-2">
-                      <Upload className="h-4 w-4" />
-                      Upload CSV
-                    </span>
-                  </Button>
-                </label>
-              </div>
-              <Button variant="outline" onClick={downloadTemplate} className="w-full sm:w-auto">
-                <Download className="h-4 w-4 mr-2" />
-                Download Template
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -337,12 +330,13 @@ const UploadMarksPage: React.FC = () => {
               </div>
 
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                <Button onClick={handleSubmit} className="flex-1 sm:flex-none">
+                <Button onClick={handleSubmit} className="flex-1 sm:flex-none" disabled={loading}>
                   <Save className="h-4 w-4 mr-2" />
-                  Submit Marks
+                  {loading ? 'Submitting...' : 'Submit Marks'}
                 </Button>
-                <Button variant="outline" className="flex-1 sm:flex-none">
-                  Save as Draft
+                <Button variant="outline" onClick={downloadTemplate} className="flex-1 sm:flex-none" disabled={!students.length}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export as Excel
                 </Button>
               </div>
             </CardContent>
