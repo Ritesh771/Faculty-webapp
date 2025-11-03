@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AttendanceChart } from '../charts/AttendanceChart';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { getDashboardOverview, getProctorStudents, getFacultyNotifications, getFacultyDashboardBootstrap } from '@/utils/faculty_api';
+import { getDashboardOverview, getProctorStudents, getFacultyNotifications, getFacultyDashboardBootstrap, getTimetable, TimetableEntry } from '@/utils/faculty_api';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, Legend } from 'recharts';
 
 interface AttendanceStatRaw {
@@ -75,26 +75,69 @@ export const FacultyDashboard: React.FC = () => {
 
   useEffect(() => {
     (async () => {
-      const res = await getDashboardOverview();
-      if (res?.success) {
-        const data: DashboardOverviewRaw = res.data || {};
-        setOverview(data);
-        setAttendanceData(transformChartData(data?.stats || data?.attendance_stats || []));
-      }
-      // Fetch live counts using optimized bootstrap API
-      try {
-        const [bootstrapRes, notifs] = await Promise.all([
-          getFacultyDashboardBootstrap(),
-          getFacultyNotifications(),
-        ]);
-        if (bootstrapRes?.success && bootstrapRes.data) {
-          setProctorCount(bootstrapRes.data.proctor_students.length);
+      // Use the optimized bootstrap API that includes all necessary data
+      const bootstrapRes = await getFacultyDashboardBootstrap();
+      if (bootstrapRes?.success && bootstrapRes.data) {
+        const { assignments, proctor_students } = bootstrapRes.data;
+        setProctorCount(proctor_students.length);
+        
+        // Get today's classes from timetable data
+        const timetableRes = await getTimetable();
+        if (timetableRes?.success && timetableRes.data) {
+          // Filter classes for today
+          const today = new Date();
+          const todayDay = today.getDay(); // 0=Sun,1=Mon,...
+          const dayMap: Record<number, string> = { 0: 'SUN', 1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT' };
+          const todayCode = dayMap[todayDay];
+          
+          const todayClasses = timetableRes.data
+            .filter(entry => entry.day === todayCode)
+            .map(entry => ({
+              subject: entry.subject,
+              start_time: entry.start_time,
+              end_time: entry.end_time,
+              room: entry.room,
+              section: entry.section,
+              semester: entry.semester,
+            }));
+          
+          setOverview({
+            today_classes: todayClasses,
+            total_students: proctor_students.length,
+            pending_tasks: 0,
+            new_notifications: 0,
+          });
         }
+        
+        // Get notifications count
+        const notifs = await getFacultyNotifications();
         if (notifs?.success && Array.isArray(notifs.data)) {
           setNotificationCount(notifs.data.length);
         }
-      } catch (e) {
-        // ignore background count errors
+      } else {
+        // Fallback to old method if bootstrap fails
+        const res = await getDashboardOverview();
+        if (res?.success) {
+          const data: DashboardOverviewRaw = res.data || {};
+          setOverview(data);
+          setAttendanceData(transformChartData(data?.stats || data?.attendance_stats || []));
+        }
+        
+        // Fetch live counts
+        try {
+          const [proctorRes, notifs] = await Promise.all([
+            getProctorStudents(),
+            getFacultyNotifications(),
+          ]);
+          if (proctorRes?.success && proctorRes.data) {
+            setProctorCount(proctorRes.data.length);
+          }
+          if (notifs?.success && Array.isArray(notifs.data)) {
+            setNotificationCount(notifs.data.length);
+          }
+        } catch (e) {
+          // ignore background count errors
+        }
       }
     })();
   }, []);

@@ -39,7 +39,7 @@ const navigationItems: NavItem[] = [
   { label: 'Upload Marks', href: '/dashboard/upload-marks', icon: Upload, roles: ['faculty'] },
   { label: 'Apply Leave', href: '/dashboard/apply-leave', icon: FileInput, roles: ['faculty'] },
   { label: 'Attendance Records', href: '/dashboard/attendance-records', icon: BarChart3, roles: ['faculty'] },
-  { label: 'Generate Statistics', href: '/dashboard/generate-statistics', icon: TrendingUp, roles: ['faculty'] },
+  
   { label: 'Announcements', href: '/dashboard/announcements', icon: Megaphone, roles: ['faculty'] },
   { label: 'Proctor Students', href: '/dashboard/proctor-students', icon: Users, roles: ['faculty'] },
   { label: 'Manage Student Leave', href: '/dashboard/manage-student-leave', icon: FileCheck, roles: ['faculty'] },

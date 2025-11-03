@@ -51,34 +51,30 @@ const GenerateStatisticsPage: React.FC = () => {
     (async () => {
       setLoading(true);
       try {
-        const res = await getFacultyAssignments();
-        if (res?.success && res?.data) setAssignments(res.data);
-        
+        const assignmentsRes = await getFacultyAssignments();
+        if (assignmentsRes?.success && assignmentsRes?.data) {
+          setAssignments(assignmentsRes.data);
+        }
+
+        // Generate statistics without requiring a file_id (use empty string for general stats)
         const gen = await generateStatistics({ file_id: '' });
         if (gen?.success) {
           setStats(gen.data?.stats || []);
           if (gen.data?.pdf_url) setPdfUrl(gen.data.pdf_url);
         }
 
-        // Fetch attendance trend data
+        // Fetch attendance trend data - remove fallback mock data
         setAttendanceTrendLoading(true);
         const trendRes = await getAttendanceTrend();
         if (trendRes?.success && trendRes?.data) {
           setAttendanceTrendData(trendRes.data);
         } else {
-          // Fallback to mock data if API fails
-          setAttendanceTrendData([
-            { month: 'Jan', attendance: 80 },
-            { month: 'Feb', attendance: 84 },
-            { month: 'Mar', attendance: 88 },
-            { month: 'Apr', attendance: 95 },
-            { month: 'May', attendance: 89 },
-            { month: 'Jun', attendance: 92 },
-          ]);
+          // No fallback data - leave empty if API fails
+          setAttendanceTrendData([]);
         }
         setAttendanceTrendLoading(false);
 
-        // Fetch grade distribution data
+        // Fetch grade distribution data - remove fallback mock data
         setGradeDistributionLoading(true);
         const gradeRes = await getGradeDistribution();
         if (gradeRes?.success && gradeRes?.data) {
@@ -89,14 +85,8 @@ const GenerateStatisticsPage: React.FC = () => {
           }));
           setGradeDistributionData(dataWithColors);
         } else {
-          // Fallback to mock data if API fails
-          setGradeDistributionData([
-            { grade: 'A+', count: 12, color: '#22c55e' },
-            { grade: 'A', count: 18, color: '#3b82f6' },
-            { grade: 'B+', count: 15, color: '#f59e0b' },
-            { grade: 'B', count: 8, color: '#ef4444' },
-            { grade: 'C', count: 3, color: '#6b7280' },
-          ]);
+          // No fallback data - leave empty if API fails
+          setGradeDistributionData([]);
         }
         setGradeDistributionLoading(false);
       } catch (error) {
@@ -171,6 +161,12 @@ const GenerateStatisticsPage: React.FC = () => {
   const averageAttendance = useMemo(() => {
     if (!subjectPerformanceData.length) return 0;
     const sum = subjectPerformanceData.reduce((acc, item) => acc + (Number(item.attendance) || 0), 0);
+    return Math.round((sum / subjectPerformanceData.length) * 10) / 10;
+  }, [subjectPerformanceData]);
+
+  const averageMarks = useMemo(() => {
+    if (!subjectPerformanceData.length) return 0;
+    const sum = subjectPerformanceData.reduce((acc, item) => acc + (Number(item.marks) || 0), 0);
     return Math.round((sum / subjectPerformanceData.length) * 10) / 10;
   }, [subjectPerformanceData]);
 
@@ -373,8 +369,8 @@ const GenerateStatisticsPage: React.FC = () => {
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Average Marks</p>
-              <p className="text-3xl font-bold text-green-600">83.2%</p>
-              <p className="text-xs text-green-600 mt-1">↑ 1.8% from last month</p>
+              <p className="text-3xl font-bold text-green-600">{averageMarks}%</p>
+              <p className="text-xs text-green-600 mt-1">Updated from backend</p>
             </div>
           </CardContent>
         </Card>

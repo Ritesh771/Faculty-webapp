@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/context/AuthContext';
+import { manageChat } from '@/utils/faculty_api';
 
-// Mock data for conversations
+// Mock data for conversations - replace with real API data
 const conversations = [
   { id: 1, name: 'General Discussion', unread: 3, type: 'group' },
   { id: 2, name: 'Dr. Sarah Johnson', unread: 0, type: 'faculty' },
@@ -36,23 +37,55 @@ const ChatPage: React.FC = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState(mockMessages);
   const [searchTerm, setSearchTerm] = useState('');
+  const [chatChannels, setChatChannels] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch available chat channels
+    const fetchChatChannels = async () => {
+      try {
+        const response = await manageChat({ message: '' }, 'GET');
+        if (response?.success && response?.data) {
+          setChatChannels(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch chat channels:', error);
+      }
+    };
+    
+    fetchChatChannels();
+  }, []);
 
   const filteredConversations = conversations.filter(
     convo => convo.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim()) {
-      const newMessage = {
-        id: messages.length + 1,
-        sender: 'Me',
-        text: message,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isCurrentUser: true,
-      };
-      setMessages([...messages, newMessage]);
-      setMessage('');
+      // Send message via API
+      try {
+        const response = await manageChat({
+          channel_id: activeConversation.id.toString(),
+          message: message.trim(),
+          type: 'subject'
+        }, 'POST');
+        
+        if (response?.success) {
+          const newMessage = {
+            id: messages.length + 1,
+            sender: 'Me',
+            text: message.trim(),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isCurrentUser: true,
+          };
+          setMessages([...messages, newMessage]);
+          setMessage('');
+        } else {
+          console.error('Failed to send message:', response?.message);
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
     }
   };
 
