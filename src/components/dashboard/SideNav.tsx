@@ -77,7 +77,7 @@ export const SideNav: React.FC = () => {
           </div>
           <div className="flex flex-col">
             <span className="font-semibold text-sm text-gray-900">NeuroCampus</span>
-            <span className="text-xs text-gray-600">AMC College</span>
+            <span className="text-xs text-muted-foreground">AMC College</span>
           </div>
         </div>
       </SidebarHeader>
@@ -119,18 +119,18 @@ export const SideNav: React.FC = () => {
 
       <SidebarFooter className="p-4 bg-white/60 backdrop-blur-sm border-t">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
-            <UserCircle className="h-6 w-6 text-gray-600" />
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted">
+            <UserCircle className="h-6 w-6 text-muted-foreground" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-600 capitalize">{user.role}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
             </div>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="w-full justify-start gap-2 border-gray-200 text-gray-700 hover:bg-gray-50"
+            className="w-full justify-start gap-2 border-border text-muted-foreground hover:bg-muted"
           >
             <LogOut className="h-4 w-4" />
             Logout

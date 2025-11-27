@@ -118,7 +118,7 @@ const TimetablePage: React.FC = () => {
               <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold tracking-tight text-gray-900 truncate">
                 Timetable Management
               </h1>
-              <p className="text-xs sm:text-sm lg:text-base text-gray-600 mt-1">
+              <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1">
                 Manage class schedules with clash detection
               </p>
             </div>
@@ -128,9 +128,9 @@ const TimetablePage: React.FC = () => {
                   <div className="flex items-center gap-2 text-sm">
                     <Badge variant="outline" className="border-primary text-primary">Now</Badge>
                     <span className="font-medium text-gray-900">{currentClass.subject}</span>
-                    <span className="text-gray-500">• {currentClass.time}</span>
-                    <span className="text-gray-500">• {currentClass.room}</span>
-                    <span className="ml-auto text-gray-600">Sem {currentClass.semester}-{currentClass.section}</span>
+                    <span className="text-muted-foreground">• {currentClass.time}</span>
+                    <span className="text-muted-foreground">• {currentClass.room}</span>
+                    <span className="ml-auto text-muted-foreground">Sem {currentClass.semester}-{currentClass.section}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -181,7 +181,7 @@ const TimetablePage: React.FC = () => {
                   <div className="space-y-2">
                     {timeSlots.map(timeSlot => (
                       <div key={timeSlot} className="grid grid-cols-7 gap-2">
-                        <div className="font-medium text-sm p-3 bg-gray-50 rounded border text-center flex items-center justify-center min-h-[72px] sm:min-h-[100px] min-w-[90px]">
+                        <div className="font-medium text-sm p-3 bg-muted rounded border text-center flex items-center justify-center min-h-[72px] sm:min-h-[100px] min-w-[90px]">
                           <span className="transform -rotate-90 sm:rotate-0 whitespace-nowrap">
                             {timeSlot}
                           </span>
@@ -192,7 +192,7 @@ const TimetablePage: React.FC = () => {
                           );
                           return (
                             <div key={`${code}-${timeSlot}`} className={[
-                              "min-h-[72px] sm:min-h-[100px] border rounded p-3 bg-white hover:bg-gray-50 transition-colors min-w-[120px]",
+                              "min-h-[72px] sm:min-h-[100px] border rounded p-3 bg-white hover:bg-muted transition-colors min-w-[120px]",
                               code === todayCode ? "border-blue-300" : ""
                             ].join(' ')}>
                               {classForSlot ? (
@@ -200,10 +200,10 @@ const TimetablePage: React.FC = () => {
                                   <div className="font-medium text-sm text-blue-600 line-clamp-2">
                                     {classForSlot.subject}
                                   </div>
-                                  <div className="text-xs text-gray-600 line-clamp-1">
+                                  <div className="text-xs text-muted-foreground line-clamp-1">
                                     {classForSlot.faculty}
                                   </div>
-                                  <div className="text-xs text-gray-500 line-clamp-1">
+                                  <div className="text-xs text-muted-foreground line-clamp-1">
                                     {classForSlot.room}
                                   </div>
                                   <div className="mt-auto">

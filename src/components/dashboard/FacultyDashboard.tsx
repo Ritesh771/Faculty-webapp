@@ -198,7 +198,7 @@ export const FacultyDashboard: React.FC = () => {
         variants={itemVariants}
       >
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Faculty Dashboard</h1>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm text-gray-500">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm text-muted-foreground">
           
           <span className="hidden sm:inline mx-2 text-gray-300">|</span>
           <span>Spring Semester 2025</span>
@@ -414,7 +414,7 @@ export const FacultyDashboard: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <div className="flex-1">
                       <h4 className="font-medium text-sm sm:text-base">{classInfo.subject}</h4>
-                      <div className="flex flex-wrap items-center mt-1 text-xs sm:text-sm text-gray-500 gap-2">
+                      <div className="flex flex-wrap items-center mt-1 text-xs sm:text-sm text-muted-foreground gap-2">
                         <div className="flex items-center">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

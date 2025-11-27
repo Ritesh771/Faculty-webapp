@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState("account");
 
   return (
@@ -204,29 +206,32 @@ const SettingsPage: React.FC = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium">Theme</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     {[
-                      { id: 'theme-light', name: 'Light', selected: true },
-                      { id: 'theme-dark', name: 'Dark', selected: false },
-                      { id: 'theme-system', name: 'System', selected: false },
-                    ].map((theme) => (
-                      <div
-                        key={theme.id}
-                        className={`border rounded-md p-3 sm:p-4 cursor-pointer ${
-                          theme.selected ? 'border-primary bg-primary/5' : 'hover:border-gray-400'
+                      { id: 'theme-light', name: 'Light', value: 'light' },
+                      { id: 'theme-dark', name: 'Dark', value: 'dark' },
+                    ].map((themeOption) => (
+                      <button
+                        key={themeOption.id}
+                        onClick={() => setTheme(themeOption.value as 'light' | 'dark')}
+                        className={`border rounded-md p-3 sm:p-4 cursor-pointer transition-colors ${
+                          theme === themeOption.value ? 'border-primary bg-primary/5' : 'hover:border-gray-400'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm">{theme.name}</span>
-                          {theme.selected && (
+                          <span className="font-medium text-sm">{themeOption.name}</span>
+                          {theme === themeOption.value && (
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                           )}
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Current theme: <span className="font-medium capitalize">{theme}</span>
+                  </p>
                 </div>
                 
                 <div className="space-y-4">

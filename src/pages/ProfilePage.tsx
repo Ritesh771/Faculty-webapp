@@ -210,24 +210,24 @@ const ProfilePage: React.FC = () => {
                 </form>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <User className="h-5 w-5 text-gray-500" />
+                  <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                    <User className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">Full Name</p>
+                      <p className="text-sm text-muted-foreground">Full Name</p>
                       <p className="font-medium">{profileData.name}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <Mail className="h-5 w-5 text-gray-500" />
+                  <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">Email Address</p>
+                      <p className="text-sm text-muted-foreground">Email Address</p>
                       <p className="font-medium">{profileData.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <Phone className="h-5 w-5 text-gray-500" />
+                  <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                    <Phone className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-gray-600">Phone Number</p>
+                      <p className="text-sm text-muted-foreground">Phone Number</p>
                       <p className="font-medium">{profileData.phone}</p>
                     </div>
                   </div>

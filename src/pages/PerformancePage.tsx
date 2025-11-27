@@ -64,10 +64,10 @@ const PerformancePage: React.FC = () => {
         >
           <div className="flex flex-col gap-4">
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold tracking-tight text-gray-900 truncate">
+              <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold tracking-tight text-foreground truncate">
                 Performance Analytics
               </h1>
-              <p className="text-xs sm:text-sm lg:text-base text-gray-600 mt-1">
+              <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1">
                 Attendance vs marks analysis across classes and subjects
               </p>
             </div>
@@ -212,7 +212,7 @@ const PerformancePage: React.FC = () => {
               <ScrollArea className="w-full">
                 <div className="min-w-[600px]">
                   {/* Table Header */}
-                  <div className="grid grid-cols-4 gap-4 p-3 sm:p-4 bg-gray-50 border-b font-medium text-xs sm:text-sm text-gray-700">
+                  <div className="grid grid-cols-4 gap-4 p-3 sm:p-4 bg-muted border-b font-medium text-xs sm:text-sm text-foreground">
                     <div>Subject</div>
                     <div className="text-center">Average Marks (%)</div>
                     <div className="text-center">Attendance (%)</div>
@@ -229,9 +229,9 @@ const PerformancePage: React.FC = () => {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ duration: 0.3, delay: index * 0.1 }}
-                          className="grid grid-cols-4 gap-4 p-3 sm:p-4 border-b hover:bg-gray-50 transition-colors"
+                          className="grid grid-cols-4 gap-4 p-3 sm:p-4 border-b hover:bg-muted transition-colors"
                         >
-                          <div className="font-medium text-gray-900 text-xs sm:text-sm truncate">{subject.subject}</div>
+                          <div className="font-medium text-foreground text-xs sm:text-sm truncate">{subject.subject}</div>
                           <div className="text-center">
                             <span className={`font-medium text-xs sm:text-sm ${
                               subject.avgMarks >= 85 ? 'text-green-600' : 
@@ -276,9 +276,9 @@ const PerformancePage: React.FC = () => {
           <Card>
             <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <p className="text-xs sm:text-sm text-gray-600">Department Average</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Department Average</p>
                 <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-600">87.2%</p>
-                <p className="text-xs text-gray-500 mt-1">Overall Performance</p>
+                <p className="text-xs text-muted-foreground mt-1">Overall Performance</p>
               </div>
             </CardContent>
           </Card>
@@ -286,9 +286,9 @@ const PerformancePage: React.FC = () => {
           <Card>
             <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <p className="text-xs sm:text-sm text-gray-600">Best Performing</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Best Performing</p>
                 <p className="text-sm sm:text-lg font-bold text-green-600">CS-4A</p>
-                <p className="text-xs text-gray-500 mt-1">92% attendance, 85% marks</p>
+                <p className="text-xs text-muted-foreground mt-1">92% attendance, 85% marks</p>
               </div>
             </CardContent>
           </Card>
@@ -296,9 +296,9 @@ const PerformancePage: React.FC = () => {
           <Card>
             <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <p className="text-xs sm:text-sm text-gray-600">Needs Attention</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Needs Attention</p>
                 <p className="text-sm sm:text-lg font-bold text-red-600">CS-5B</p>
-                <p className="text-xs text-gray-500 mt-1">83% attendance, 75% marks</p>
+                <p className="text-xs text-muted-foreground mt-1">83% attendance, 75% marks</p>
               </div>
             </CardContent>
           </Card>
@@ -306,9 +306,9 @@ const PerformancePage: React.FC = () => {
           <Card>
             <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <p className="text-xs sm:text-sm text-gray-600">Monthly Trend</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Monthly Trend</p>
                 <p className="text-xl sm:text-2xl font-bold text-green-600">+2.3%</p>
-                <p className="text-xs text-gray-500 mt-1">Improvement this month</p>
+                <p className="text-xs text-muted-foreground mt-1">Improvement this month</p>
               </div>
             </CardContent>
           </Card>

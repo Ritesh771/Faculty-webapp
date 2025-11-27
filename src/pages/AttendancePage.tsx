@@ -5,24 +5,73 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/context/AuthContext';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 const AIAttendance: React.FC = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [attendanceCount, setAttendanceCount] = useState(0);
 
-  const handleStartCamera = () => {
-    setCameraActive(true);
+  const handleStartCamera = async () => {
+    try {
+      // Use Capacitor Camera to capture classroom image
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        promptLabelHeader: 'Classroom Attendance',
+        promptLabelPhoto: 'Take Classroom Photo',
+        promptLabelPicture: 'Choose from Gallery'
+      });
+
+      if (image.dataUrl) {
+        setCameraActive(true);
+        // Process the captured image for attendance
+        await handleTakeAttendance(image.dataUrl);
+      }
+    } catch (error) {
+      console.error('Camera capture error:', error);
+      // Handle camera permission denied or other errors
+      alert('Camera access denied. Please check camera permissions.');
+    }
   };
 
-  const handleTakeAttendance = () => {
+  const handleTakeAttendance = async (imageDataUrl?: string) => {
     setProcessing(true);
-    
-    // Simulate AI processing
-    setTimeout(() => {
+
+    try {
+      if (imageDataUrl) {
+        // Convert data URL to blob for API upload
+        const response = await fetch(imageDataUrl);
+        const blob = await response.blob();
+
+        const formData = new FormData();
+        formData.append('classroom_image', blob, 'classroom.jpg');
+
+        // TODO: Replace with actual AI attendance API endpoint
+        // const apiResponse = await fetch('/api/attendance/ai-process', {
+        //   method: 'POST',
+        //   body: formData,
+        // });
+
+        // For now, simulate processing
+        setTimeout(() => {
+          setProcessing(false);
+          setAttendanceCount(Math.floor(Math.random() * 30) + 15); // Random between 15-45
+        }, 3000);
+      } else {
+        // Fallback to simulation if no image provided
+        setTimeout(() => {
+          setProcessing(false);
+          setAttendanceCount(Math.floor(Math.random() * 30) + 15);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Attendance processing error:', error);
       setProcessing(false);
-      setAttendanceCount(Math.floor(Math.random() * 30) + 15); // Random between 15-45
-    }, 2000);
+      alert('Failed to process attendance. Please try again.');
+    }
   };
 
   return (
@@ -50,15 +99,15 @@ const AIAttendance: React.FC = () => {
           {!cameraActive ? (
             <div className="flex flex-col items-center justify-center h-[300px] sm:h-[400px]">
               <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <p className="text-gray-500 text-center">
+              <p className="text-muted-foreground text-center">
                 Click "Start Camera" to begin face recognition attendance
               </p>
-              <p className="text-xs text-gray-400 mt-2 max-w-md text-center">
+              <p className="text-xs text-muted-foreground mt-2 max-w-md text-center">
                 Our AI system will automatically detect and mark students present in the classroom
               </p>
             </div>
@@ -70,7 +119,7 @@ const AIAttendance: React.FC = () => {
                 </svg>
               </div>
               <p className="text-gray-700 font-medium">Processing Attendance</p>
-              <p className="text-xs text-gray-500 mt-2">Recognizing faces and marking attendance...</p>
+              <p className="text-xs text-muted-foreground mt-2">Recognizing faces and marking attendance...</p>
             </div>
           ) : attendanceCount > 0 ? (
             <div className="flex flex-col items-center justify-center h-[300px] sm:h-[400px]">
@@ -225,7 +274,7 @@ const ManualAttendance: React.FC = () => {
                 </thead>
                 <tbody>
                   {students.map((student) => (
-                    <tr key={student.id} className="border-b hover:bg-gray-50">
+                    <tr key={student.id} className="border-b hover:bg-muted">
                       <td className="py-2 text-sm">{student.id}</td>
                       <td className="py-2 text-sm">{student.name}</td>
                       <td className="py-2 text-center">
@@ -264,11 +313,11 @@ const ManualAttendance: React.FC = () => {
         <Card>
           <CardContent className="p-6 flex flex-col items-center justify-center h-[300px]">
             <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <p className="text-gray-500 text-center">
+            <p className="text-muted-foreground text-center">
               Please select a class to take attendance
             </p>
           </CardContent>
@@ -305,10 +354,10 @@ const AttendanceReports: React.FC = () => {
             <CardDescription>Monthly attendance rates across all courses</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <div className="h-[300px] flex items-center justify-center bg-muted rounded-lg border border-dashed border-gray-200">
               <div className="text-center">
-                <p className="text-sm text-gray-500">Attendance Trend Chart</p>
-                <p className="text-xs text-gray-400 mt-1">Data visualization will appear here</p>
+                <p className="text-sm text-muted-foreground">Attendance Trend Chart</p>
+                <p className="text-xs text-muted-foreground mt-1">Data visualization will appear here</p>
               </div>
             </div>
           </CardContent>
@@ -329,10 +378,10 @@ const AttendanceReports: React.FC = () => {
                 { course: 'CS305: Algorithms', attendance: '92.1%', sessions: 8, trend: 'up' },
                 { course: 'CS341: AI and Machine Learning', attendance: '89.5%', sessions: 6, trend: 'stable' },
               ].map((course, i) => (
-                <div key={i} className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50">
+                <div key={i} className="flex items-center justify-between p-3 border rounded-md hover:bg-muted">
                   <div>
                     <p className="font-medium text-sm">{course.course}</p>
-                    <p className="text-xs text-gray-500">{course.sessions} sessions</p>
+                    <p className="text-xs text-muted-foreground">{course.sessions} sessions</p>
                   </div>
                   <div className="flex items-center">
                     <span className="font-medium text-sm">{course.attendance}</span>
@@ -371,7 +420,7 @@ const AttendancePage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Attendance Management</h1>
         <div className="mt-2 md:mt-0">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </span>
         </div>

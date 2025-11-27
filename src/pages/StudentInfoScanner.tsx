@@ -10,6 +10,7 @@ import { Search, User, Calendar, BookOpen, TrendingUp, CreditCard, Users, Clock,
 import { showErrorAlert, showSuccessAlert } from "@/utils/sweetalert";
 import { BrowserMultiFormatReader, NotFoundException, ChecksumException, FormatException } from '@zxing/library';
 import { getApiBaseUrl } from "@/utils/config";
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface StudentInfo {
   name: string;
@@ -94,8 +95,6 @@ const StudentInfoScanner = () => {
   const [faceScanning, setFaceScanning] = useState(false);
   const [faceScanError, setFaceScanError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const faceVideoRef = useRef<HTMLVideoElement>(null);
-  const faceCanvasRef = useRef<HTMLCanvasElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
 
   // Define callbacks before useEffect hooks
@@ -112,25 +111,69 @@ const StudentInfoScanner = () => {
     setFaceScanError(null);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (faceVideoRef.current) {
-        faceVideoRef.current.srcObject = stream;
-        faceVideoRef.current.play();
+      // Use Capacitor Camera to capture face image
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        promptLabelHeader: 'Face Recognition',
+        promptLabelPhoto: 'Capture Face',
+        promptLabelPicture: 'Choose from Gallery'
+      });
+
+      if (image.dataUrl) {
+        // Process the captured image for face recognition
+        await processCapturedFace(image.dataUrl);
       }
     } catch (error) {
-      setFaceScanError('Unable to access camera');
+      console.error('Face camera capture error:', error);
+      setFaceScanError('Camera access denied or failed. Please check camera permissions.');
       setFaceScanning(false);
     }
   }, []);
 
-  const stopFaceScanning = useCallback(() => {
-    setFaceScanning(false);
-    setFaceScanError(null);
-    if (faceVideoRef.current && faceVideoRef.current.srcObject) {
-      const stream = faceVideoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+  const processCapturedFace = async (imageDataUrl: string) => {
+    try {
+      // Convert data URL to blob for API upload
+      const response = await fetch(imageDataUrl);
+      const blob = await response.blob();
+
+      const formData = new FormData();
+      formData.append('image', blob, 'face.jpg');
+
+      const apiResponse = await fetch(`${getApiBaseUrl()}/recognize-face/`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await apiResponse.json();
+
+      if (data.success) {
+        // Handle different possible formats of data.usn
+        let usnFromFace = data.usn;
+        if (typeof usnFromFace === 'object' && usnFromFace !== null) {
+          // If it's an object, try to extract the USN value
+          usnFromFace = usnFromFace.usn || usnFromFace.value || String(usnFromFace);
+        }
+        const recognizedUsn = String(usnFromFace).toUpperCase();
+        console.log('Face recognition USN:', data.usn, 'processed as:', recognizedUsn); // Debug log
+        setUsn(recognizedUsn);
+        setShowFaceScanner(false);
+        setFaceScanning(false);
+        showSuccessAlert("Face Recognized", `USN: ${recognizedUsn}`);
+        // Automatically fetch data after recognition
+        await fetchStudentData(recognizedUsn);
+      } else {
+        setFaceScanError(data.message || 'Face not recognized');
+        setFaceScanning(false);
+      }
+    } catch (error) {
+      console.error('Face recognition error:', error);
+      setFaceScanError('Recognition failed. Please try again.');
+      setFaceScanning(false);
     }
-  }, []);
+  };
 
   const toggleScanner = useCallback(() => {
     if (showScanner) {
@@ -141,31 +184,34 @@ const StudentInfoScanner = () => {
 
   const toggleFaceScanner = useCallback(() => {
     if (showFaceScanner) {
-      stopFaceScanning();
+      setShowFaceScanner(false);
+      setFaceScanning(false);
+      setFaceScanError(null);
     } else {
-      startFaceScanning();
+      setShowFaceScanner(true);
+      // Face scanning will start when user clicks the button
     }
-    setShowFaceScanner(!showFaceScanner);
-  }, [showFaceScanner, stopFaceScanning, startFaceScanning]);
+  }, [showFaceScanner]);
 
   // Cleanup effects
   useEffect(() => {
     if (!showFaceScanner && faceScanning) {
-      stopFaceScanning();
+      setFaceScanning(false);
+      setFaceScanError(null);
     }
-  }, [showFaceScanner, faceScanning, stopFaceScanning]);
+  }, [showFaceScanner, faceScanning]);
 
   useEffect(() => {
     return () => {
       // Cleanup on component unmount
       if (faceScanning) {
-        stopFaceScanning();
+        setFaceScanning(false);
       }
       if (scanning) {
         stopScanning();
       }
     };
-  }, [faceScanning, scanning, stopFaceScanning, stopScanning]);
+  }, [faceScanning, scanning, stopScanning]);
 
   // Initialize code reader
   useEffect(() => {
@@ -265,60 +311,88 @@ const StudentInfoScanner = () => {
   };
 
   const startScanning = async () => {
-    if (!codeReader.current || !videoRef.current) {
-      setScanError("Scanner not properly initialized");
-      showErrorAlert("Scan Error", "Scanner not properly initialized");
-      return;
-    }
-
-    // Check if camera is available
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      if (videoDevices.length === 0) {
-        setScanError("No camera found. Please ensure your device has a camera and camera permissions are granted.");
-        showErrorAlert("Scan Error", "No camera found. Please ensure your device has a camera and camera permissions are granted.");
-        return;
-      }
-    } catch (error) {
-      console.warn("Could not enumerate devices:", error);
-      // Continue anyway, as some browsers may not support enumerateDevices
-    }
-
     setScanning(true);
     setScanError(null);
 
     try {
-      const result = await codeReader.current.decodeOnceFromVideoDevice(undefined, videoRef.current);
-      if (result) {
-        const scannedText = result.getText();
-        if (scannedText && typeof scannedText === 'string' && scannedText.trim()) {
-          const scannedUsn = scannedText.trim().toUpperCase();
-          setUsn(scannedUsn);
-          setShowScanner(false);
-          showSuccessAlert("Barcode Scanned", `USN: ${scannedUsn}`);
-          // Automatically fetch data after scanning with the scanned USN
-          await fetchStudentData(scannedUsn);
-        } else {
-          setScanError("Invalid barcode data received");
-          showErrorAlert("Scan Error", "Invalid barcode data received");
-        }
-      } else {
-        setScanError("No barcode detected");
-        showErrorAlert("Scan Error", "No barcode detected");
+      // Use Capacitor Camera to capture image
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        promptLabelHeader: 'Scan Student Barcode',
+        promptLabelPhoto: 'Take Photo',
+        promptLabelPicture: 'Choose from Gallery'
+      });
+
+      if (image.dataUrl) {
+        // Convert data URL to blob for ZXing processing
+        const response = await fetch(image.dataUrl);
+        const blob = await response.blob();
+
+        // Create image element for ZXing
+        const img = new Image();
+        img.onload = async () => {
+          try {
+            // Initialize ZXing reader if not already done
+            if (!codeReader.current) {
+              codeReader.current = new BrowserMultiFormatReader();
+            }
+
+            // Create canvas to draw image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Could not get canvas context');
+
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            // Get image data for ZXing
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            // Decode the barcode
+            const result = await codeReader.current.decodeFromImageData(imageData);
+
+            if (result) {
+              const scannedText = result.getText();
+              if (scannedText && typeof scannedText === 'string' && scannedText.trim()) {
+                const scannedUsn = scannedText.trim().toUpperCase();
+                setUsn(scannedUsn);
+                setShowScanner(false);
+                showSuccessAlert("Barcode Scanned", `USN: ${scannedUsn}`);
+                // Automatically fetch data after scanning with the scanned USN
+                await fetchStudentData(scannedUsn);
+              } else {
+                setScanError("Invalid barcode data received");
+                showErrorAlert("Scan Error", "Invalid barcode data received");
+              }
+            } else {
+              setScanError("No barcode detected in the image");
+              showErrorAlert("Scan Error", "No barcode detected in the image");
+            }
+          } catch (err) {
+            if (err instanceof NotFoundException) {
+              setScanError("No barcode detected. Please ensure the barcode is clearly visible and well-lit.");
+            } else if (err instanceof ChecksumException) {
+              setScanError("Barcode checksum error. The barcode may be damaged or incomplete.");
+            } else if (err instanceof FormatException) {
+              setScanError("Invalid barcode format. Please try a different barcode.");
+            } else {
+              setScanError("Scanning failed. Please try again.");
+              console.error("Barcode scan error:", err);
+            }
+            showErrorAlert("Scan Error", "Barcode scanning failed. Please try again.");
+          }
+        };
+
+        img.src = image.dataUrl;
       }
-    } catch (err) {
-      if (err instanceof NotFoundException) {
-        setScanError("No barcode detected. Please ensure the barcode is clearly visible and well-lit.");
-      } else if (err instanceof ChecksumException) {
-        setScanError("Barcode checksum error. The barcode may be damaged or incomplete.");
-      } else if (err instanceof FormatException) {
-        setScanError("Invalid barcode format. Please try a different barcode.");
-      } else {
-        setScanError("Scanning failed. Please try again.");
-        console.error("Barcode scan error:", err);
-      }
-      showErrorAlert("Scan Error", "Barcode scanning failed. Please try again.");
+    } catch (error) {
+      console.error('Camera capture error:', error);
+      setScanError("Camera access denied or failed. Please check camera permissions.");
+      showErrorAlert("Scan Error", "Camera access denied or failed. Please check camera permissions.");
     } finally {
       setScanning(false);
     }
@@ -328,58 +402,6 @@ const StudentInfoScanner = () => {
     if (e.key === 'Enter') {
       fetchStudentData();
     }
-  };
-
-  // Face scanning functions
-  const captureAndRecognizeFace = async () => {
-    if (!faceVideoRef.current || !faceCanvasRef.current) return;
-
-    const canvas = faceCanvasRef.current;
-    const video = faceVideoRef.current;
-    const context = canvas.getContext('2d');
-
-    if (!context) return;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob(async (blob) => {
-      if (!blob) return;
-
-      const formData = new FormData();
-      formData.append('image', blob, 'face.jpg');
-
-      try {
-        const response = await fetch(`${getApiBaseUrl()}/recognize-face/`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          // Handle different possible formats of data.usn
-          let usnFromFace = data.usn;
-          if (typeof usnFromFace === 'object' && usnFromFace !== null) {
-            // If it's an object, try to extract the USN value
-            usnFromFace = usnFromFace.usn || usnFromFace.value || String(usnFromFace);
-          }
-          const recognizedUsn = String(usnFromFace).toUpperCase();
-          console.log('Face recognition USN:', data.usn, 'processed as:', recognizedUsn); // Debug log
-          setUsn(recognizedUsn);
-          setShowFaceScanner(false);
-          stopFaceScanning();
-          showSuccessAlert("Face Recognized", `USN: ${recognizedUsn}`);
-          // Automatically fetch data after recognition
-          await fetchStudentData(recognizedUsn);
-        } else {
-          setFaceScanError(data.message || 'Face not recognized');
-        }
-      } catch (error) {
-        setFaceScanError('Recognition failed');
-      }
-    }, 'image/jpeg');
   };
 
   const containerVariants = {
@@ -575,22 +597,21 @@ const StudentInfoScanner = () => {
                 </Button>
               </div>
               <div className="space-y-4">
-                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                  Position the barcode within the camera view and click "Start Scanning"
+                <div className="text-center text-sm text-muted-foreground">
+                  Click "Scan Barcode" to open camera and scan student barcode
                 </div>
-                <div className="relative bg-black rounded-lg overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    className="w-full h-64 object-cover"
-                    playsInline
-                    muted
-                  />
-                  {!scanning && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                      <div className="text-center text-white">
-                        <Camera className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Click "Start Scanning" to begin</p>
-                      </div>
+                <div className="relative bg-muted rounded-lg overflow-hidden min-h-[200px] flex items-center justify-center">
+                  {!scanning ? (
+                    <div className="text-center text-muted-foreground">
+                      <QrCode className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">Ready to Scan</p>
+                      <p className="text-sm">Click the button below to open camera</p>
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-lg font-medium mb-2">Scanning...</p>
+                      <p className="text-sm">Processing barcode image</p>
                     </div>
                   )}
                 </div>
@@ -601,23 +622,14 @@ const StudentInfoScanner = () => {
                   </div>
                 )}
                 <div className="flex gap-2">
-                  {!scanning ? (
-                    <Button
-                      onClick={startScanning}
-                      className="flex-1 bg-[#a259ff] hover:bg-[#a259ff]/90 text-white"
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Start Scanning
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={stopScanning}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Stop Scanning
-                    </Button>
-                  )}
+                  <Button
+                    onClick={startScanning}
+                    disabled={scanning}
+                    className="flex-1 bg-[#a259ff] hover:bg-[#a259ff]/90 text-white"
+                  >
+                    <QrCode className="h-4 w-4 mr-2" />
+                    {scanning ? 'Scanning...' : 'Scan Barcode'}
+                  </Button>
                   <Button
                     onClick={() => setShowScanner(false)}
                     variant="outline"
@@ -625,7 +637,7 @@ const StudentInfoScanner = () => {
                     Close
                   </Button>
                 </div>
-                <div className="text-center text-xs text-gray-500">
+                <div className="text-center text-xs text-muted-foreground">
                   Supported formats: Code 128, Code 39, EAN-13, QR Code, and more
                 </div>
               </div>
@@ -1148,26 +1160,21 @@ const StudentInfoScanner = () => {
                 </Button>
               </div>
               <div className="space-y-4">
-                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                  Position your face in the camera view and click "Capture & Recognize"
+                <div className="text-center text-sm text-muted-foreground">
+                  Click "Capture Face" to take a photo for face recognition
                 </div>
-                <div className="relative bg-black rounded-lg overflow-hidden">
-                  <video
-                    ref={faceVideoRef}
-                    className="w-full h-64 object-cover"
-                    playsInline
-                    muted
-                  />
-                  <canvas
-                    ref={faceCanvasRef}
-                    className="hidden"
-                  />
-                  {!faceScanning && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                      <div className="text-center text-white">
-                        <Camera className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Click "Start Scanning" to begin</p>
-                      </div>
+                <div className="relative bg-muted rounded-lg overflow-hidden min-h-[200px] flex items-center justify-center">
+                  {!faceScanning ? (
+                    <div className="text-center text-muted-foreground">
+                      <Camera className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">Ready to Capture</p>
+                      <p className="text-sm">Click the button below to open camera</p>
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-lg font-medium mb-2">Processing...</p>
+                      <p className="text-sm">Analyzing face for recognition</p>
                     </div>
                   )}
                 </div>
@@ -1178,33 +1185,26 @@ const StudentInfoScanner = () => {
                   </div>
                 )}
                 <div className="flex gap-2">
-                  {!faceScanning ? (
-                    <Button
-                      onClick={startFaceScanning}
-                      className="flex-1 bg-[#a259ff] hover:bg-[#a259ff]/90 text-white"
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Start Scanning
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={captureAndRecognizeFace}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Capture & Recognize
-                    </Button>
-                  )}
+                  <Button
+                    onClick={startFaceScanning}
+                    disabled={faceScanning}
+                    className="flex-1 bg-[#a259ff] hover:bg-[#a259ff]/90 text-white"
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    {faceScanning ? 'Processing...' : 'Capture Face'}
+                  </Button>
                   <Button
                     onClick={() => {
                       setShowFaceScanner(false);
-                      stopFaceScanning();
+                      setFaceScanning(false);
+                      setFaceScanError(null);
                     }}
                     variant="outline"
                   >
                     Close
                   </Button>
                 </div>
-                <div className="text-center text-xs text-gray-500">
+                <div className="text-center text-xs text-muted-foreground">
                   Ensure good lighting and clear face visibility for best results
                 </div>
               </div>
