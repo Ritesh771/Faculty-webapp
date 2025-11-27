@@ -54,6 +54,7 @@ import LeaveRequestPage from "./pages/LeaveRequestPage";
 import LeaveStatusPage from "./pages/LeaveStatusPage";
 import CertificatesPage from "./pages/CertificatesPage";
 import FaceRecognitionPage from "./pages/FaceRecognitionPage";
+import StudentInfoScanner from "./pages/StudentInfoScanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,43 +77,44 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <ScrollToTop />
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/auth/login" element={<LoginPage />} />
-              <Route path="/auth/otp" element={<OTPPage />} />
-              <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
-              <Route path="/auth/reset" element={<ResetPasswordPage />} />
-              
-              {/* Dashboard routes - protected by DashboardLayout */}
-              <Route path="/dashboard" element={<DashboardLayout />}>
-                <Route index element={<Dashboard />} />
+              <ScrollToTop />
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/auth/login" element={<LoginPage />} />
+                <Route path="/auth/otp" element={<OTPPage />} />
+                <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
+                <Route path="/auth/reset" element={<ResetPasswordPage />} />
                 
-                {/* Faculty routes */}
-                <Route path="take-attendance" element={<TakeAttendancePage />} />
-                <Route path="upload-marks" element={<UploadMarksPage />} />
-                <Route path="apply-leave" element={<ApplyLeavePage />} />
-                <Route path="attendance-records" element={<AttendanceRecordsPage />} />
-                <Route path="announcements" element={<AnnouncementsPage />} />
-                <Route path="proctor-students" element={<ProctorStudentsPage />} />
-                <Route path="manage-student-leave" element={<ManageStudentLeavePage />} />
-                <Route path="schedule-mentoring" element={<ScheduleMentoringPage />} />
-                <Route path="generate-statistics" element={<GenerateStatisticsPage />} />
-                <Route path="timetable" element={<TimetablePage />} />
-                <Route path="chat" element={<ChatPage />} />
-                <Route path="profile" element={<ProfilePage />} />
-                <Route path="settings" element={<SettingsPage />} />
-              </Route>
-              
-              {/* Catch all 404 route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <NoInternetCard />
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+                {/* Dashboard routes - protected by DashboardLayout */}
+                <Route path="/dashboard" element={<DashboardLayout />}>
+                  <Route index element={<Dashboard />} />
+                  
+                  {/* Faculty routes */}
+                  <Route path="take-attendance" element={<TakeAttendancePage />} />
+                  <Route path="upload-marks" element={<UploadMarksPage />} />
+                  <Route path="apply-leave" element={<ApplyLeavePage />} />
+                  <Route path="attendance-records" element={<AttendanceRecordsPage />} />
+                  <Route path="announcements" element={<AnnouncementsPage />} />
+                  <Route path="proctor-students" element={<ProctorStudentsPage />} />
+                  <Route path="manage-student-leave" element={<ManageStudentLeavePage />} />
+                  <Route path="schedule-mentoring" element={<ScheduleMentoringPage />} />
+                  <Route path="generate-statistics" element={<GenerateStatisticsPage />} />
+                  <Route path="timetable" element={<TimetablePage />} />
+                  <Route path="chat" element={<ChatPage />} />
+                  <Route path="profile" element={<ProfilePage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="student-info-scanner" element={<StudentInfoScanner />} />
+                </Route>
+                
+                {/* Catch all 404 route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <NoInternetCard />
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
   );
 };
 

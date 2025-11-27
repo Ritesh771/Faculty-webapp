@@ -1,0 +1,1221 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useTheme } from "@/context/ThemeContext";
+import { Search, User, Calendar, BookOpen, TrendingUp, CreditCard, Users, Clock, MapPin, Phone, Mail, Heart, Lock, Shield, QrCode, X, Camera, AlertCircle } from "lucide-react";
+import { showErrorAlert, showSuccessAlert } from "@/utils/sweetalert";
+import { BrowserMultiFormatReader, NotFoundException, ChecksumException, FormatException } from '@zxing/library';
+import { getApiBaseUrl } from "@/utils/config";
+
+interface StudentInfo {
+  name: string;
+  usn: string;
+  semester: number;
+  section: string;
+  branch: string;
+  batch: string;
+  course: string;
+  mode_of_admission: string;
+  date_of_admission: string;
+  parent_name: string;
+  parent_contact: string;
+  emergency_contact: string;
+  blood_group: string;
+  email: string;
+  mobile_number: string;
+  proctor: {
+    name: string;
+    email: string;
+  };
+}
+
+interface AttendanceData {
+  overall_percentage: number;
+  total_classes: number;
+  present_classes: number;
+  by_subject: { [key: string]: { present: number; total: number; percentage: number } };
+}
+
+interface CurrentClass {
+  subject: string;
+  subject_code: string;
+  teacher: string;
+  room: string;
+  start_time: string;
+  end_time: string;
+  day: string;
+}
+
+interface StudentData {
+  success: boolean;
+  student_info: StudentInfo;
+  current_class: CurrentClass | null;
+  next_class: CurrentClass | null;
+  attendance: AttendanceData;
+  internal_marks: Record<string, Array<{
+    test_number: number;
+    mark: number;
+    max_mark: number;
+    percentage: number;
+    faculty: string;
+  }>>;
+  subjects_registered: Array<{
+    subject_name: string;
+    subject_code: string;
+    credits: number;
+    subject_type: string;
+    status: string;
+  }>;
+  fee_summary: {
+    total_fees?: number;
+    amount_paid?: number;
+    remaining_fees?: number;
+    payment_status?: string;
+    error?: boolean;
+  } | null;
+}
+
+const StudentInfoScanner = () => {
+  const [usn, setUsn] = useState("");
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [showFaceScanner, setShowFaceScanner] = useState(false);
+  const [faceScanning, setFaceScanning] = useState(false);
+  const [faceScanError, setFaceScanError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const faceVideoRef = useRef<HTMLVideoElement>(null);
+  const faceCanvasRef = useRef<HTMLCanvasElement>(null);
+  const codeReader = useRef<BrowserMultiFormatReader | null>(null);
+
+  // Define callbacks before useEffect hooks
+  const stopScanning = useCallback(() => {
+    if (codeReader.current) {
+      codeReader.current.reset();
+    }
+    setScanning(false);
+    setScanError(null);
+  }, []);
+
+  const startFaceScanning = useCallback(async () => {
+    setFaceScanning(true);
+    setFaceScanError(null);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (faceVideoRef.current) {
+        faceVideoRef.current.srcObject = stream;
+        faceVideoRef.current.play();
+      }
+    } catch (error) {
+      setFaceScanError('Unable to access camera');
+      setFaceScanning(false);
+    }
+  }, []);
+
+  const stopFaceScanning = useCallback(() => {
+    setFaceScanning(false);
+    setFaceScanError(null);
+    if (faceVideoRef.current && faceVideoRef.current.srcObject) {
+      const stream = faceVideoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+    }
+  }, []);
+
+  const toggleScanner = useCallback(() => {
+    if (showScanner) {
+      stopScanning();
+    }
+    setShowScanner(!showScanner);
+  }, [showScanner, stopScanning]);
+
+  const toggleFaceScanner = useCallback(() => {
+    if (showFaceScanner) {
+      stopFaceScanning();
+    } else {
+      startFaceScanning();
+    }
+    setShowFaceScanner(!showFaceScanner);
+  }, [showFaceScanner, stopFaceScanning, startFaceScanning]);
+
+  // Cleanup effects
+  useEffect(() => {
+    if (!showFaceScanner && faceScanning) {
+      stopFaceScanning();
+    }
+  }, [showFaceScanner, faceScanning, stopFaceScanning]);
+
+  useEffect(() => {
+    return () => {
+      // Cleanup on component unmount
+      if (faceScanning) {
+        stopFaceScanning();
+      }
+      if (scanning) {
+        stopScanning();
+      }
+    };
+  }, [faceScanning, scanning, stopFaceScanning, stopScanning]);
+
+  // Initialize code reader
+  useEffect(() => {
+    codeReader.current = new BrowserMultiFormatReader();
+    return () => {
+      if (codeReader.current) {
+        codeReader.current.reset();
+      }
+    };
+  }, []);
+
+  // Clean up scanner when modal closes
+  useEffect(() => {
+    if (!showScanner && codeReader.current) {
+      codeReader.current.reset();
+      setScanning(false);
+      setScanError(null);
+    }
+  }, [showScanner]);
+
+  const verifyPassword = () => {
+    if (password === 'hod@cseaiml') {
+      setIsUnlocked(true);
+      setPasswordError(null);
+      localStorage.setItem('hod_student_scanner_unlocked', 'true');
+      showSuccessAlert("Access Granted", "Student Information Scanner unlocked successfully");
+    } else {
+      setPasswordError("Incorrect password. Please try again.");
+      showErrorAlert("Access Denied", "Incorrect password");
+    }
+  };
+
+  const handlePasswordKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      verifyPassword();
+    }
+  };
+
+  const fetchStudentData = async (usnToFetch?: string) => {
+    let usnValue: string;
+
+    if (usnToFetch) {
+      usnValue = String(usnToFetch).trim();
+    } else if (usn) {
+      usnValue = String(usn).trim();
+    } else {
+      usnValue = "";
+    }
+
+    console.log('fetchStudentData called with usnToFetch:', usnToFetch, 'usn state:', usn, 'usnValue:', usnValue); // Debug log
+
+    if (!usnValue) {
+      showErrorAlert("Error", "Please enter a USN");
+      return;
+    }
+
+    // Ensure it's uppercase for consistency
+    usnValue = usnValue.toUpperCase();
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/public/student-data/?usn=${encodeURIComponent(usnValue)}`);
+      const data = await response.json();
+
+      console.log('API Response:', response.status, data); // Debug log
+
+      if (response.ok) {
+        // Check if the response has the expected structure
+        if (data && typeof data === 'object') {
+          // If backend returns data directly without success wrapper
+          if (data.student_info || data.success) {
+            setStudentData(data);
+            showSuccessAlert("Success", "Student data retrieved successfully");
+          } else {
+            // Backend returned data but not in expected format
+            setError(data.message || "Invalid response format from server");
+            showErrorAlert("Error", data.message || "Invalid response format from server");
+          }
+        } else {
+          setError("Invalid response format from server");
+          showErrorAlert("Error", "Invalid response format from server");
+        }
+      } else {
+        // HTTP error status
+        setError(data.message || `Server error: ${response.status}`);
+        showErrorAlert("Error", data.message || `Server error: ${response.status}`);
+      }
+    } catch (err) {
+      console.error('Network error:', err); // Debug log
+      setError("Network error occurred");
+      showErrorAlert("Error", "Network error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startScanning = async () => {
+    if (!codeReader.current || !videoRef.current) {
+      setScanError("Scanner not properly initialized");
+      showErrorAlert("Scan Error", "Scanner not properly initialized");
+      return;
+    }
+
+    // Check if camera is available
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      if (videoDevices.length === 0) {
+        setScanError("No camera found. Please ensure your device has a camera and camera permissions are granted.");
+        showErrorAlert("Scan Error", "No camera found. Please ensure your device has a camera and camera permissions are granted.");
+        return;
+      }
+    } catch (error) {
+      console.warn("Could not enumerate devices:", error);
+      // Continue anyway, as some browsers may not support enumerateDevices
+    }
+
+    setScanning(true);
+    setScanError(null);
+
+    try {
+      const result = await codeReader.current.decodeOnceFromVideoDevice(undefined, videoRef.current);
+      if (result) {
+        const scannedText = result.getText();
+        if (scannedText && typeof scannedText === 'string' && scannedText.trim()) {
+          const scannedUsn = scannedText.trim().toUpperCase();
+          setUsn(scannedUsn);
+          setShowScanner(false);
+          showSuccessAlert("Barcode Scanned", `USN: ${scannedUsn}`);
+          // Automatically fetch data after scanning with the scanned USN
+          await fetchStudentData(scannedUsn);
+        } else {
+          setScanError("Invalid barcode data received");
+          showErrorAlert("Scan Error", "Invalid barcode data received");
+        }
+      } else {
+        setScanError("No barcode detected");
+        showErrorAlert("Scan Error", "No barcode detected");
+      }
+    } catch (err) {
+      if (err instanceof NotFoundException) {
+        setScanError("No barcode detected. Please ensure the barcode is clearly visible and well-lit.");
+      } else if (err instanceof ChecksumException) {
+        setScanError("Barcode checksum error. The barcode may be damaged or incomplete.");
+      } else if (err instanceof FormatException) {
+        setScanError("Invalid barcode format. Please try a different barcode.");
+      } else {
+        setScanError("Scanning failed. Please try again.");
+        console.error("Barcode scan error:", err);
+      }
+      showErrorAlert("Scan Error", "Barcode scanning failed. Please try again.");
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      fetchStudentData();
+    }
+  };
+
+  // Face scanning functions
+  const captureAndRecognizeFace = async () => {
+    if (!faceVideoRef.current || !faceCanvasRef.current) return;
+
+    const canvas = faceCanvasRef.current;
+    const video = faceVideoRef.current;
+    const context = canvas.getContext('2d');
+
+    if (!context) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+
+      const formData = new FormData();
+      formData.append('image', blob, 'face.jpg');
+
+      try {
+        const response = await fetch(`${getApiBaseUrl()}/recognize-face/`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Handle different possible formats of data.usn
+          let usnFromFace = data.usn;
+          if (typeof usnFromFace === 'object' && usnFromFace !== null) {
+            // If it's an object, try to extract the USN value
+            usnFromFace = usnFromFace.usn || usnFromFace.value || String(usnFromFace);
+          }
+          const recognizedUsn = String(usnFromFace).toUpperCase();
+          console.log('Face recognition USN:', data.usn, 'processed as:', recognizedUsn); // Debug log
+          setUsn(recognizedUsn);
+          setShowFaceScanner(false);
+          stopFaceScanning();
+          showSuccessAlert("Face Recognized", `USN: ${recognizedUsn}`);
+          // Automatically fetch data after recognition
+          await fetchStudentData(recognizedUsn);
+        } else {
+          setFaceScanError(data.message || 'Face not recognized');
+        }
+      } catch (error) {
+        setFaceScanError('Recognition failed');
+      }
+    }, 'image/jpeg');
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.5 }
+    }
+  };
+
+  return (
+    <motion.div
+      className="space-y-6 text-gray-900"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {!isUnlocked ? (
+        // Password Protection Screen
+        <motion.div
+          className="min-h-[60vh] flex items-center justify-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card className="w-full max-w-md bg-white border-gray-200">
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 rounded-full bg-[#a259ff]/10">
+                  <Shield className="h-8 w-8 text-[#a259ff]" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl font-bold">Access Restricted</CardTitle>
+              <p className="text-sm text-gray-600">
+                Enter password to access Student Information Scanner
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    type="password"
+                    placeholder="Enter password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyPress={handlePasswordKeyPress}
+                    className="pl-10 h-12 bg-white border-gray-300 text-gray-900"
+                  />
+                </div>
+                {passwordError && (
+                  <p className="text-sm text-red-500">{passwordError}</p>
+                )}
+              </div>
+              <Button
+                onClick={verifyPassword}
+                className="w-full h-12 bg-[#a259ff] hover:bg-[#a259ff]/90 text-white"
+              >
+                Unlock Scanner
+              </Button>
+              <div className="text-center">
+                <p className="text-xs text-gray-500">
+                  This page requires HOD authorization
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      ) : (
+        <>
+          {/* Header */}
+          <motion.div
+            className="text-center space-y-2"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1 className="text-3xl font-bold text-gray-900">
+              Student Info Scanner
+            </h1>
+            <p className="text-lg text-gray-600">
+              Enter USN to retrieve student details
+            </p>
+          </motion.div>
+
+      {/* Search Section */}
+      <motion.div
+        className="flex flex-col sm:flex-row gap-4 items-center justify-center max-w-md mx-auto"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            type="text"
+            placeholder="Enter USN (e.g.,1AM22CI079 )"
+            value={usn || ""}
+            onChange={(e) => setUsn(String(e.target.value).toUpperCase())}
+            onKeyPress={handleKeyPress}
+            className="pl-10 h-12 text-lg font-mono bg-white border-gray-300 text-gray-900"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={toggleScanner}
+            variant="outline"
+            className="h-12 px-4 border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            <QrCode className="h-4 w-4" />
+          </Button>
+          <Button
+            onClick={toggleFaceScanner}
+            variant="outline"
+            className="h-12 px-4 border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            <Camera className="h-4 w-4" />
+          </Button>
+          <Button
+            onClick={() => fetchStudentData()}
+            disabled={loading}
+            className="h-12 px-8 bg-[#a259ff] hover:bg-[#a259ff]/90 text-white"
+          >
+            {loading ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              >
+                <Search className="h-4 w-4" />
+              </motion.div>
+            ) : (
+              "Scan"
+            )}
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Error Message */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="p-4 rounded-lg border text-center max-w-md mx-auto bg-red-50 border-red-200 text-red-700"
+          >
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Barcode Scanner Modal */}
+      <AnimatePresence>
+        {showScanner && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowScanner(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-white border-gray-200 rounded-lg shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Scan Student Barcode
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowScanner(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-4">
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                  Position the barcode within the camera view and click "Start Scanning"
+                </div>
+                <div className="relative bg-black rounded-lg overflow-hidden">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-64 object-cover"
+                    playsInline
+                    muted
+                  />
+                  {!scanning && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                      <div className="text-center text-white">
+                        <Camera className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Click "Start Scanning" to begin</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {scanError && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                    <p className="text-sm text-red-700">{scanError}</p>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  {!scanning ? (
+                    <Button
+                      onClick={startScanning}
+                      className="flex-1 bg-[#a259ff] hover:bg-[#a259ff]/90 text-white"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Start Scanning
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={stopScanning}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Stop Scanning
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => setShowScanner(false)}
+                    variant="outline"
+                  >
+                    Close
+                  </Button>
+                </div>
+                <div className="text-center text-xs text-gray-500">
+                  Supported formats: Code 128, Code 39, EAN-13, QR Code, and more
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Student Data Display */}
+      <AnimatePresence>
+        {studentData && studentData.success && (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            exit={{ opacity: 0, y: 20 }}
+            className="space-y-6"
+          >
+            {/* Basic Information */}
+            <motion.div variants={cardVariants}>
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-[#a259ff]" />
+                    Basic Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Name:</span>
+                        <span>{studentData.student_info.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">USN:</span>
+                        <Badge variant="secondary" className="font-mono">{studentData.student_info.usn}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Email:</span>
+                        {studentData.student_info.email ? (
+                          <a
+                            href={`mailto:${studentData.student_info.email}`}
+                            className="text-blue-600 hover:text-blue-800 underline text-sm hover:underline"
+                          >
+                            {studentData.student_info.email}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-500">Not provided</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Mobile:</span>
+                        {studentData.student_info.mobile_number ? (
+                          <a
+                            href={`tel:${studentData.student_info.mobile_number}`}
+                            className="text-blue-600 hover:text-blue-800 underline text-sm hover:underline"
+                          >
+                            {studentData.student_info.mobile_number}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-500">Not provided</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Branch:</span>
+                        <span>{studentData.student_info.branch}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Semester:</span>
+                        <Badge>{studentData.student_info.semester}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Section:</span>
+                        <Badge variant="outline">{studentData.student_info.section}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Batch:</span>
+                        <span>{studentData.student_info.batch}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Course:</span>
+                        <span>{studentData.student_info.course}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Mode of Admission:</span>
+                        <span>{studentData.student_info.mode_of_admission}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Date of Admission:</span>
+                        <span>{studentData.student_info.date_of_admission}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Heart className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Blood Group:</span>
+                        <Badge variant="destructive">{studentData.student_info.blood_group}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Proctor:</span>
+                        <div className="flex flex-col">
+                          <span>{studentData.student_info.proctor?.name || 'Not assigned'}</span>
+                          {studentData.student_info.proctor?.email && (
+                            <a
+                              href={`mailto:${studentData.student_info.proctor.email}`}
+                              className="text-blue-600 hover:text-blue-800 underline text-xs hover:underline"
+                            >
+                              {studentData.student_info.proctor.email}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Contact Information */}
+            <motion.div variants={cardVariants}>
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-5 w-5 text-[#a259ff]" />
+                    Emergency Contacts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Parent Name:</span>
+                        <span>{studentData.student_info.parent_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Parent Contact:</span>
+                        {studentData.student_info.parent_contact ? (
+                          <a
+                            href={`tel:${studentData.student_info.parent_contact}`}
+                            className="text-blue-600 hover:text-blue-800 underline text-sm hover:underline"
+                          >
+                            {studentData.student_info.parent_contact}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-500">Not provided</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-red-500" />
+                        <span className="font-medium">Emergency Contact:</span>
+                        {studentData.student_info.emergency_contact ? (
+                          <a
+                            href={`tel:${studentData.student_info.emergency_contact}`}
+                            className="text-red-600 hover:text-red-800 underline text-sm hover:underline"
+                          >
+                            {studentData.student_info.emergency_contact}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-500">Not provided</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Class Schedule */}
+            <motion.div variants={cardVariants}>
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-[#a259ff]" />
+                    Class Schedule
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Current Class */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <h3 className="font-semibold text-green-600">Current Class</h3>
+                      </div>
+                      {studentData.current_class ? (
+                        <div className="space-y-2 p-3 rounded-lg bg-green-50 border border-green-200">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-green-700 dark:text-green-300">{studentData.current_class.subject}</span>
+                            <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                              {studentData.current_class.subject_code}
+                            </Badge>
+                          </div>
+                          <div className="text-sm space-y-1">
+                            <div className="flex items-center gap-2">
+                              <User className="h-3 w-3 text-gray-500" />
+                              <span>{studentData.current_class.teacher}</span>
+                              {studentData.current_class.faculty_email && (
+                                <a
+                                  href={`mailto:${studentData.current_class.faculty_email}`}
+                                  className="text-blue-600 hover:text-blue-800 underline text-xs"
+                                >
+                                  ✉
+                                </a>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-gray-600 dark:text-gray-400">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                <span className="font-mono">{studentData.current_class.room}</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span className="font-semibold">{studentData.current_class.start_time} - {studentData.current_class.end_time}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 px-3 rounded-lg bg-gray-50 border border-gray-200">
+                          <Clock className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">No ongoing class</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Next Class */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <h3 className="font-semibold text-blue-600">Next Class</h3>
+                      </div>
+                      {studentData.next_class ? (
+                        <div className="space-y-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-blue-700 dark:text-blue-300">{studentData.next_class.subject}</span>
+                            <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                              {studentData.next_class.subject_code}
+                            </Badge>
+                          </div>
+                          <div className="text-sm space-y-1">
+                            <div className="flex items-center gap-2">
+                              <User className="h-3 w-3 text-gray-500" />
+                              <span>{studentData.next_class.teacher}</span>
+                              {studentData.next_class.faculty_email && (
+                                <a
+                                  href={`mailto:${studentData.next_class.faculty_email}`}
+                                  className="text-blue-600 hover:text-blue-800 underline text-xs"
+                                >
+                                  ✉
+                                </a>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-4 text-gray-600 dark:text-gray-400">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                <span className="font-mono">{studentData.next_class.room}</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span className="font-semibold">{studentData.next_class.start_time} - {studentData.next_class.end_time}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 px-3 rounded-lg bg-gray-50 border border-gray-200">
+                          <Clock className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">No upcoming class</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Schedule Info */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                      <Calendar className="h-4 w-4" />
+                      <span>Classes typically scheduled between 9 AM - 5 PM</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Attendance Overview */}
+            <motion.div variants={cardVariants}>
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-[#a259ff]" />
+                    Attendance Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="text-center">
+                      <div className={`text-3xl font-bold ${
+                        studentData.attendance.overall_percentage >= 75 ? 'text-green-500' :
+                        studentData.attendance.overall_percentage >= 60 ? 'text-yellow-500' : 'text-red-500'
+                      }`}>
+                        {studentData.attendance.overall_percentage}%
+                      </div>
+                      <div className="text-sm text-gray-500">Overall</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-500">
+                        {studentData.attendance.present_classes}
+                      </div>
+                      <div className="text-sm text-gray-500">Present</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-500">
+                        {studentData.attendance.total_classes}
+                      </div>
+                      <div className="text-sm text-gray-500">Total Classes</div>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="mt-4">
+                    <h4 className="font-medium mb-3">Subject-wise Attendance</h4>
+                    <div className="space-y-2">
+                      {Object.entries(studentData.attendance.by_subject).map(([subject, data]) => (
+                        <div key={subject} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                          <span className="font-medium">{subject}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{data.present}/{data.total}</span>
+                            <Badge
+                              variant={data.percentage >= 75 ? "default" : data.percentage >= 60 ? "secondary" : "destructive"}
+                              className="text-xs"
+                            >
+                              {data.percentage}%
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Fee Summary */}
+            <motion.div variants={cardVariants}>
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-[#a259ff]" />
+                    Fee Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {studentData.fee_summary && !studentData.fee_summary.error ? (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-blue-500">
+                          ₹{studentData.fee_summary.total_fees?.toLocaleString() || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">Total Fees</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-green-500">
+                          ₹{studentData.fee_summary.amount_paid?.toLocaleString() || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">Paid</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-red-500">
+                          ₹{studentData.fee_summary.remaining_fees?.toLocaleString() || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">Remaining</div>
+                      </div>
+                      <div className="text-center">
+                        <Badge
+                          variant={
+                            studentData.fee_summary.payment_status === 'paid' ? 'default' :
+                            studentData.fee_summary.payment_status === 'partial' ? 'secondary' : 'destructive'
+                          }
+                          className="text-sm px-3 py-1"
+                        >
+                          {studentData.fee_summary.payment_status?.toUpperCase() || 'UNKNOWN'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500">
+                      Fee data not available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Internal Marks */}
+            {Object.keys(studentData.internal_marks).length > 0 && (
+              <motion.div variants={cardVariants}>
+                <Card className="bg-white border-gray-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-[#a259ff]" />
+                      Internal Marks
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {Object.entries(studentData.internal_marks).map(([subject, marks]) => (
+                        <div key={subject} className="space-y-2">
+                          <h4 className="font-medium text-lg">{subject}</h4>
+                          <div className="space-y-2">
+                            {marks.map((mark, index: number) => (
+                              <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                                <div className="flex items-center gap-4">
+                                  <Badge variant="outline">Test {mark.test_number}</Badge>
+                                  <span className="font-medium">{mark.mark}/{mark.max_mark}</span>
+                                  <Badge variant="secondary">{mark.percentage}%</Badge>
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {mark.faculty}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Registered Subjects */}
+            {studentData.subjects_registered.length > 0 && (
+              <motion.div variants={cardVariants}>
+                <Card className="bg-white border-gray-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-[#a259ff]" />
+                      Registered Subjects
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {studentData.subjects_registered.map((subject, index) => (
+                        <div key={index} className="p-3 rounded-lg bg-gray-50 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{subject.subject_name}</span>
+                            <Badge variant="outline">{subject.subject_code}</Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span>Credits: {subject.credits}</span>
+                            <span>Type: {subject.subject_type}</span>
+                          </div>
+                          <Badge variant={subject.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                            {subject.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Face Scanner Modal */}
+      <AnimatePresence>
+        {showFaceScanner && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowFaceScanner(false);
+              stopFaceScanning();
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-white border-gray-200 rounded-lg shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Face Recognition Scan
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowFaceScanner(false);
+                    stopFaceScanning();
+                  }}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-4">
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                  Position your face in the camera view and click "Capture & Recognize"
+                </div>
+                <div className="relative bg-black rounded-lg overflow-hidden">
+                  <video
+                    ref={faceVideoRef}
+                    className="w-full h-64 object-cover"
+                    playsInline
+                    muted
+                  />
+                  <canvas
+                    ref={faceCanvasRef}
+                    className="hidden"
+                  />
+                  {!faceScanning && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                      <div className="text-center text-white">
+                        <Camera className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Click "Start Scanning" to begin</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {faceScanError && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                    <p className="text-sm text-red-700">{faceScanError}</p>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  {!faceScanning ? (
+                    <Button
+                      onClick={startFaceScanning}
+                      className="flex-1 bg-[#a259ff] hover:bg-[#a259ff]/90 text-white"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Start Scanning
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={captureAndRecognizeFace}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Capture & Recognize
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => {
+                      setShowFaceScanner(false);
+                      stopFaceScanning();
+                    }}
+                    variant="outline"
+                  >
+                    Close
+                  </Button>
+                </div>
+                <div className="text-center text-xs text-gray-500">
+                  Ensure good lighting and clear face visibility for best results
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+        </>
+      )}
+    </motion.div>
+  );
+};
+
+export default StudentInfoScanner;

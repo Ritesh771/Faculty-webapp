@@ -484,12 +484,12 @@ export const FacultyDashboard: React.FC = () => {
                 <Button 
                   variant="outline"
                   className="w-full h-auto flex flex-col items-center p-4 border-2 hover:bg-blue-50 hover:border-blue-300"
-                  onClick={() => navigate('/dashboard/upload-marks')}
+                  onClick={() => navigate('/dashboard/timetable')}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
-                  Upload Marks
+                  Time Table
                 </Button>
               </motion.div>
               <motion.div

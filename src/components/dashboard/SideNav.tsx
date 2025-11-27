@@ -36,13 +36,14 @@ interface NavItem {
 const navigationItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['faculty'] },
   { label: 'Take Attendance', href: '/dashboard/take-attendance', icon: UserCheck, roles: ['faculty'] },
-  { label: 'Upload Marks', href: '/dashboard/upload-marks', icon: Upload, roles: ['faculty'] },
+  
   { label: 'Apply Leave', href: '/dashboard/apply-leave', icon: FileInput, roles: ['faculty'] },
   { label: 'Attendance Records', href: '/dashboard/attendance-records', icon: BarChart3, roles: ['faculty'] },
   
   { label: 'Announcements', href: '/dashboard/announcements', icon: Megaphone, roles: ['faculty'] },
   { label: 'Proctor Students', href: '/dashboard/proctor-students', icon: Users, roles: ['faculty'] },
   { label: 'Manage Student Leave', href: '/dashboard/manage-student-leave', icon: FileCheck, roles: ['faculty'] },
+  { label: 'Student Info Scanner', href: '/dashboard/student-info-scanner', icon: ScanFace, roles: ['faculty'] },
   { label: 'Timetable', href: '/dashboard/timetable', icon: Calendar, roles: ['faculty'] },
   { label: 'Profile', href: '/dashboard/profile', icon: UserCircle, roles: ['faculty'] },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings, roles: ['faculty'] },
